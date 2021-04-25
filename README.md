@@ -1,7 +1,8 @@
-# AMPi-Display
+# AMPi-Display-Interface
+
 AMPi Arduino Nano code to control ST7735 TFT Screen and Rotary Encoder interface
 
-AMPi is a project that integrates a mains electricity power supply with an audio amplifier, an 4-channel audio relay switcher, input audio  transformers, Raspberry PI with DAC, ST7735 based TFT display, Arduino Nano (to control the Raspberry PI over serial and the built-in screen) to make a completely integrated digital audio solution that supports the latest high quality internet audio streaming and smart speaker Airplay & Bluetooth 5.0 functionality over either wired Ethernet or Wi-Fi in one box.
+AMPi is a project that integrates a mains electricity power supply with an audio amplifier, an 4-channel audio relay switcher, input audio  transformers, Raspberry PI with DAC, ST7735 based TFT display, Arduino Nano (to control the Raspberry PI over serial and the built-in screen) to make a completely integrated digital audio solution that supports the latest high quality internet audio streaming and smart speaker AirPlay & Bluetooth 4.2 functionality over either wired Ethernet or Wi-Fi in one box.
 
 This repository is the code for the Arduino Nano.
 
@@ -10,7 +11,27 @@ First prototype (WIP) with Raspberry Pi Model 3 and a Arduino Nano
 ![Front Side (first prototype)](https://raw.githubusercontent.com/bjaan/AMPi-Display/main/firstprototype-top.jpg)
 ![Back Side (first prototype)](https://raw.githubusercontent.com/bjaan/AMPi-Display/main/firstprototype-back.jpg)
 
-Arduino Nano Pins - use a 3.3V/5V level shifter! - as this Arduino Nano runs on 5V, while the display & Raspberry PI require both 3.3V
+# Features
+
+* 2 * 100W Class D Audio Amplifier
+* 3 switchable audio channels using a Relay analog 
+* Clear audio using build-in pre-amp and audio transformers, to allow full galvanic seperation between the external audio equipement and AMPi
+* AirPlay playback using **Shairport Sync** https://github.com/mikebrady/shairport-sync.  AMPi identifies itself as a AirPlay network player where you can connect your iPhone or Mac to play music.  You can also use Windows to route your audio to AMPi using **TuneBlade** http://www.tuneblade.com/
+* Bluetooth 4.2 Playback, this overrides everything and directly accesable after power-up
+* Pandora.com music player (WIP), using Pianobar https://github.com/PromyLOPh/pianobar
+
+# TODO / WIP
+
+* Front & Back Panel Label - with level indicators and indications what the knobs do
+* HDMI break-out cable to add in the back, needed for possibly external display or video streaming (currently shipping)
+* Raspberry Pi Software - further integration with the display interface component
+
+* Interface to enter Wi-Fi / LAN settings
+* Streaming software for 
+
+# Arduino Nano Pin Connections
+
+Use a 3.3V/5V level shifter! - as this Arduino Nano runs on 5V, while the display & Raspberry PI require both 3.3V
 
     Display (Pin) - Arduino Nano
     ----------------------------
@@ -31,10 +52,11 @@ Arduino Nano Pins - use a 3.3V/5V level shifter! - as this Arduino Nano runs on 
     Rotary Encoder Data - D3
     Rotary Encoder Switch - D4
 
-Parts used:
-* Nobsound HiFi Bluetooth 5.0 Amplifier Board 2.0 Channel Stereo Audio Amp DIY Module Digital Class D Amp APTX-HD https://nl.aliexpress.com/item/1005001412408638.html
+# Hardware Parts used
+
+* Douk Audio / Nobsound Bluetooth 4.2 TPA3116 Mini Digital Power Amplifier Board 100W*2 - this board uses 2 TPA3116 chips one for each channel, hence it's more powerfull,  It also uses two NE5532 Opamps as pre-amp https://www.aliexpress.com/item/33012752276.html or https://www.aliexpress.com/item/33014190005.html
 * AZ-Delivery 1.77 inch SPI TFT display and 128x160 pixels for Arduino https://www.az-delivery.de/en/products/1-77-zoll-spi-tft-display
-* Audio Relay Switcher, modified to accept 5V - essentially did not implement the voltage regulator as the leds & relays need 5V https://www.aliexpress.com/item/4000715642555.html
+* Audio Relay Switcher, modified to accept 5V - essentially did not implement the voltage regulator as the LEDs & relays need 5V https://www.aliexpress.com/item/4000715642555.html
 * Raspberry Pi Model 3
 * Nickel Alloy Audio Transformers 600:600 Ohm - I needed two; one for each audio channel https://www.aliexpress.com/item/32827431499.html
 * 24 LED Stereo VU Meter https://nl.aliexpress.com/item/4000136566150.html

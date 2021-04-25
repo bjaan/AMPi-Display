@@ -270,6 +270,10 @@ void renderText(char* text, char* oldText, XY position, XY size, XY colors) {
   tft.fillRect(x, y + h, w, size.y - h, colors.y);
 }
 
+void renderLogo(Control* c) {
+
+}
+
 int renderItem(Control* item, int y_delta)
 {
   if (!item->uptodate) {
@@ -329,7 +333,7 @@ void render(Control* c) {
         }
         break;
       case TYPE_ICON:
-        //todo
+        renderLogo(c);
         break;
       case TYPE_LIST:
         //background not shown tft.fillRect(c->position.x, c->position.y, c->size.x, c->size.y, ST7735_RED);
