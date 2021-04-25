@@ -1,25 +1,3 @@
-
-/***
-   Die tft Funktionen kommen aus der Adafruit Grafik-Bibliothek (Adafruit_GFX) die möglichen Funktionen finden sich unter:
-   https://learn.adafruit.com/adafruit-gfx-graphics-library?view=all
-   bzw.
-   https://cdn-learn.adafruit.com/downloads/pdf/adafruit-gfx-graphics-library.pdf
- ***/
-
-/* Pinnung TFT
-    Display (Pin) - Arduino Nano
-    GND  (1) - GND
-    VCC  (2) - 3.3V
-    SCK  (3) - D13
-    SDA  (4) - D11
-    RES  (5) - RST
-    RS   (6) - D9 (DC)
-    CS   (7) - D10
-    LEDA (8) - 3.3V
-
-    LEDA kann auch an 5V doch dann wird das Display sehr schnell sehr heiß - was ich nicht für optimal halte.
-    Beim Betrieb mit 3.3V ist das Dispklay nur minimal dunkler und bleibt kalt.
-*/
 #include <Adafruit_ST7735.h> // Adafruit ST7735-Bibliothek wird benötigt
 #include <Fonts/FreeSans9pt7b.h>
 #include <RotaryEncoder.h>
