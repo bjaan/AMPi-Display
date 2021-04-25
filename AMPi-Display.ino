@@ -1,4 +1,5 @@
-#include <Adafruit_ST7735.h> // Adafruit ST7735-Bibliothek wird benötigt
+
+#include <Adafruit_ST7735.h>
 #include <Fonts/FreeSans9pt7b.h>
 #include <RotaryEncoder.h>
 
@@ -11,8 +12,8 @@
 #define TYPE_LABEL 100
 #define TYPE_RECTANGLE 200
 #define TYPE_LIST 300
-#define TYPE_ITEM 400
-#define TYPE_ICON 500
+#define TYPE_ICON 400
+#define TYPE_ITEM 500
 
 struct Control;
 
@@ -78,19 +79,7 @@ struct Control {
   };
 };
 
-struct StackedString {
-  size_t size;
-  char* string;
-  StackedString* next;
-
-  StackedString(size_t size) {
-    this->size = size;
-    string = (char*)malloc(size);
-  }
-};
-
-//int8_t cs, int8_t dc, int8_t mosi, int8_t sclk, int8_t rst
-Adafruit_ST7735 tft = Adafruit_ST7735(10 /*cs*/, 9 /*dc*/, 11/*mosi*/, 13 /*sclk*/, -1 /*rst*/); // ST7735-Bibliothek Setup
+Adafruit_ST7735 tft = Adafruit_ST7735(10 /*cs*/, 9 /*dc*/, 11/*mosi*/, 13 /*sclk*/, -1 /*rst*/);
 
 RotaryEncoder encoder(ROTENC_CLK, ROTENC_DT, RotaryEncoder::LatchMode::TWO03);
 
@@ -107,13 +96,6 @@ Control* rpiPowerLabel;
 Control* mainMenu;
 
 void setup(void) {
-
-  /***
-     ST7735-Chip initialisieren (INITR_BLACKTAB)
-     Muss bei AZ-Delivery 1.77'' 160x128px RGB TFT INITR_GREENTAB sein ansonsten Pixelfehler rechts und unten.
-     Hinweis: https://github.com/adafruit/Adafruit-ST7735-Library/blob/master/examples/soft_spitftbitmap/soft_spitftbitmap.ino#L52
-     Zeile 52-65
-   ***/
 
   tft.initR(INITR_BLACKTAB);
 
@@ -240,6 +222,7 @@ void setup(void) {
   rpiPowerIcon->size.y = 15;
   rpiPowerIcon->position.x = 3+45/*AMPi label width*/+2;
   rpiPowerIcon->position.y = 22;
+  strcpy(rpiPowerIcon->text, "\x0x1fe\x0x1fe\x0x1fc\x0x3e\x0x1f0\x0xe\x0x1e2\x0x1c6\x0x1c6\x0x1e2\x0x1ce\x0x1f2\x0x1fe\x0x1f8\x0x2\x0x1f8\x0x2\x0x1f8\x0x1fe\x0x1f8\x0x1ce\x0x1f2\x0x1c6\x0x1e2\x0x1e2\x0x1c6\x0x1f0\x0xe\x0x1f8\x0x3e\x0x1fe\x0x1fe\0");
   
   //build main menu
   mainMenu->child = rpiPowerItem;
@@ -253,6 +236,8 @@ void setup(void) {
   statusBar3->next = statusLabel;
   statusLabel->next = ampiLabelMain;
   ampiLabelMain->next = mainMenu;
+  mainMenu->next = rpiPowerIcon;
+  //rpiPowerIcon->next = null;
 
   Serial.begin(9600); // open the serial port at 9600 bps:
 
@@ -342,6 +327,9 @@ void render(Control* c) {
             col_b += delta_b;
           }
         }
+        break;
+      case TYPE_ICON:
+        //todo
         break;
       case TYPE_LIST:
         //background not shown tft.fillRect(c->position.x, c->position.y, c->size.x, c->size.y, ST7735_RED);
