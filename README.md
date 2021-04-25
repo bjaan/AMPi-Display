@@ -1,7 +1,5 @@
 # AMPi-Display
-AMPI Arduino Nano code to control ST7735 TFT Screen and Rotary Encoder interface
-
-Welcome to the AMPi-Display wiki!
+AMPi Arduino Nano code to control ST7735 TFT Screen and Rotary Encoder interface
 
 AMPi is a project that integrates a mains electricity power supply with an audio amplifier, an 4-channel audio relay switcher, input audio  transformers, Raspberry PI with DAC, ST7735 based TFT display, Arduino Nano (to control the Raspberry PI over serial and the built-in screen) to make a completely integrated digital audio solution that supports the latest high quality audio streaming and smart speaker Bluetooth 5.0 functionality in one box.
 
@@ -12,7 +10,7 @@ First prototype (WIP) with Raspberry Pi Model 3 and a Arduino Nano
 ![Front Side (first prototype)](https://raw.githubusercontent.com/bjaan/AMPi-Display/main/firstprototype-top.jpg)
 ![Back Side (first prototype)](https://raw.githubusercontent.com/bjaan/AMPi-Display/main/firstprototype-back.jpg)
 
-Arduino Nano Pins:
+Arduino Nano Pins - use a 3.3V/5V level shifter! as this Arduino Nano runs on 5V, while the display & Raspberry PI requires 3.3V
 
     Display (Pin) - Arduino Nano
     ----------------------------
@@ -24,27 +22,30 @@ Arduino Nano Pins:
     RS   (6) - D9 (DC)
     CS   (7) - D10
     LEDA (8) - 3.3V
-    
-    Other (Pin) - Arduino Nano
+
+   
+    Other - Arduino Nano
     ----------------------------
-    Raspberry Pi Relay Signal - 8
-    Rotary Encoder Clock - 2
-    Rotary Encoder Data - 3
-    Rotary Encoder Switch - 4
+    Raspberry Pi Relay Signal - D8
+    Rotary Encoder Clock - D2
+    Rotary Encoder Data - D3
+    Rotary Encoder Switch - D4
+	
 
 Parts used:
 * Nobsound HiFi Bluetooth 5.0 Amplifier Board 2.0 Channel Stereo Audio Amp DIY Module Digital Class D Amp APTX-HD https://nl.aliexpress.com/item/1005001412408638.html
 * AZ-Delivery 1.77 inch SPI TFT display and 128x160 pixels for Arduino https://www.az-delivery.de/en/products/1-77-zoll-spi-tft-display
 * Audio Relay Switcher https://www.aliexpress.com/item/4000715642555.html
 * Raspberry Pi Model 3
-* Nickel Alloy Audio Transformers 600:600 Ohm https://www.aliexpress.com/item/32827431499.html
+* Nickel Alloy Audio Transformers 600:600 Ohm - I needed two; one for each audio channel https://www.aliexpress.com/item/32827431499.html
 * 24 LED Stereo VU Meter https://nl.aliexpress.com/item/4000136566150.html
+* 3.3V/5V level-shifter to protect the Raspberry Pi & Display - I needed two https://www.amazon.de/-/en/gp/product/B07LG6RK7L
 * AZ-Delivery Arduino Nano https://www.az-delivery.de/en/products/nano-v3-mit-ftdi-arduino-kompatibel
 * Thick Micro USB Cable to power the Raspberry PI 3 https://www.aliexpress.com/item/33027891253.html
 * Micro SD Card extension cable https://www.aliexpress.com/item/4000405842609.html
 * 24V USB Car Charger - to power the Raspberry PI, I used the one that came with a PSVITA
 * 3mm thick aluminum plates cut to size
-* 100V - 240V Switching Power Supply 24V https://www.amazon.de/gp/product/B01H5MK3OI/
+* 100-40V Switching Power Supply 24V https://www.amazon.de/gp/product/B01H5MK3OI/
 * Speaker Terminals https://www.amazon.de/gp/product/B000L0ZMWK
 * Electric (braided) wire to connect speaker terminals and mains electricity
 * Prototype boards to attach components (Arduino Nano & Audio Transformers & connectors to the display and Raspberry Pi)
@@ -57,14 +58,14 @@ Parts used:
 * Rotary Encoder https://www.amazon.de/gp/product/B07T3672VK
 * Jumper Wires and DuPont to connectors to wire everything up
 * Spacer screws to attach the Arduino and top plate where the amplifier board rests
-* Velleman Case WCAH2507 INSTRUMENT CASE - GREY 250 x 190 x 80mm https://www.velleman.eu/products/view?id=17836&country=be&lang=en
+* Velleman Case WCAH2507 INSTRUMENT CASE - GREY 250 x 190 x 80mm https://www.velleman.eu/products/view?id=17836
 * Speakers - I used repaired 3-way ones from HECO/Summit from the early 80's
 
 Tools used:
 * Soldering iron & Solder
 * Fabric Adhesive Tape https://www.aliexpress.com/item/4000235805659.html
 * Kapton Tape https://www.aliexpress.com/item/4001221342106.html
-* Hot glue (sorry, not sorry) to hold the VU-meter and Micro-SD Card Holder in -strongly- place
+* Hot glue (sorry, not sorry) to hold the VU-meter and Micro-SD Card Holder *strongly* in place
 * Wire Cutters https://www.aliexpress.com/item/32950629549.html
 
 Notes from the TFT supplier in German.
