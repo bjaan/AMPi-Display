@@ -11,11 +11,14 @@ First prototype (WIP) with Raspberry Pi Model 3 and a Arduino Nano
 ![Front Side (first prototype)](https://raw.githubusercontent.com/bjaan/AMPi-Display/main/firstprototype-top.jpg)
 ![Back Side (first prototype)](https://raw.githubusercontent.com/bjaan/AMPi-Display/main/firstprototype-back.jpg)
 
-# Features
+# AMPi features
 
-* 2 * 100W Class D Audio Amplifier
-* 3 switchable audio channels using a Relay analog 
+* 2 x 100W Class D Audio Amplifier
+* 3 switchable analog audio channels using a relay array through a rotary switch
+* Audio level indicator
 * Clear audio using build-in pre-amp and audio transformers, to allow full galvanic seperation between the external audio equipement and AMPi
+* Computer controlled interface that controls screen, and the power of and the service running on the built-in audio streaming device
+* Built-in power supply
 * AirPlay playback using **Shairport Sync** https://github.com/mikebrady/shairport-sync.  AMPi identifies itself as a AirPlay network player where you can connect your iPhone or Mac to play music.  You can also use Windows to route your audio to AMPi using **TuneBlade** http://www.tuneblade.com/
 * Bluetooth 4.2 Playback, this overrides everything and directly accesable after power-up
 * Pandora.com music player (WIP), using Pianobar https://github.com/PromyLOPh/pianobar
@@ -27,11 +30,11 @@ First prototype (WIP) with Raspberry Pi Model 3 and a Arduino Nano
 * Raspberry Pi Software - further integration with the display interface component
 
 * Interface to enter Wi-Fi / LAN settings
-* Streaming software for 
+* Streaming software for Apple Music
 
-# Arduino Nano Pin Connections
+# Arduino Nano pin connections
 
-Use a 3.3V/5V level shifter! - as this Arduino Nano runs on 5V, while the display & Raspberry PI require both 3.3V
+Use a 3.3V/5V level shifter! - as this Arduino Nano runs on 5V, while the display & Raspberry Pi require both 3.3V
 
     Display (Pin) - Arduino Nano
     ----------------------------
@@ -52,6 +55,33 @@ Use a 3.3V/5V level shifter! - as this Arduino Nano runs on 5V, while the displa
     Rotary Encoder Data - D3
     Rotary Encoder Switch - D4
 
+# Power connections
+```
+mains --- power supply +--- 24V --- DC/DC Converter +--- 12V --- Audio level indicator
+                       |                            |
+					   |                            +--- 12V --- DC/DC Converter +--- 5V --- Audio Relayboard --- 5V --- Audio Switch
+					   |                                                         |
+					   |                                                         +--- 5V --- Arduino Nano +--- 3.3V --- Display
+					   |                                                                                  |
+					   |                                                                                  +--- 3.3V --- Serial
+					   |
+					   +--- 24V --- USB Charger --- 5V --- Raspberry Pi -- 5V -- DAC
+					   |
+					   +--- 24V --- AMP Board
+```
+
+# Audio signal connections
+
+```
+DAC --------+--- Audio Relayboard --- Audio Transformer Board ---+--  Bluetooth Relay (AMP Board) ---+--- Pre-Amp (AMP Board) --- Amplifier (AMP Board) -- Speakers
+            |                                                    |                                   |
+Analog 1 ---+                      Bluetooth Chip (AMP Board) ---+                                   +--- Audio level indicator
+            |
+Analog 2 ---+            |
+            |
+Analog 3 ---+
+```
+					   
 # Hardware Parts used
 
 * Douk Audio / Nobsound Bluetooth 4.2 TPA3116 Mini Digital Power Amplifier Board 100W*2 - this board uses 2 TPA3116 chips one for each channel, hence it's more powerfull,  It also uses two NE5532 Opamps as pre-amp https://www.aliexpress.com/item/33012752276.html or https://www.aliexpress.com/item/33014190005.html

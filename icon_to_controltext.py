@@ -13,11 +13,11 @@ for x in range(0,im.size[0]):
     for y in range(0,im.size[0]):
         # pix[x,y] = the RGBA Value of the a pixel of an image
         # either 1 or 0 as this a one-bit image to be expected
-        if pix[x,y] == 1:
-            char = (1 << count) | char
+        if pix[x,y] == 0:
+            char = (1 << count-1) | char
         count -= 1
         if count == 0:
-            chars += '\\x' + hex(char)
+            chars += '\\x' + hex(char)[2:]
             count = 8
             char = 0
 

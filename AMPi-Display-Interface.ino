@@ -53,7 +53,7 @@ struct Control {
     this->parent = parent;
     selected = false;
     visible = true;
-    if (type == TYPE_LABEL || type == TYPE_ITEM) {
+    if (type == TYPE_LABEL || type == TYPE_ITEM || type == TYPE_ICON) {
       text = (char*)malloc(35);
       text[0] = 0;
       oldText = (char*)malloc(35);
@@ -218,11 +218,11 @@ void setup(void) {
   appleItem->colors.y = tft.color565(255, 140, 26);
 
   Control* rpiPowerIcon = new Control(TYPE_ICON, mainControl);
-  rpiPowerIcon->size.x = 15;
-  rpiPowerIcon->size.y = 15;
+  rpiPowerIcon->size.x = 16;
+  rpiPowerIcon->size.y = 16;
   rpiPowerIcon->position.x = 3+45/*AMPi label width*/+2;
   rpiPowerIcon->position.y = 22;
-  strcpy(rpiPowerIcon->text, "\x0x1fe\x0x1fe\x0x1fc\x0x3e\x0x1f0\x0xe\x0x1e2\x0x1c6\x0x1c6\x0x1e2\x0x1ce\x0x1f2\x0x1fe\x0x1f8\x0x2\x0x1f8\x0x2\x0x1f8\x0x1fe\x0x1f8\x0x1ce\x0x1f2\x0x1c6\x0x1e2\x0x1e2\x0x1c6\x0x1f0\x0xe\x0x1f8\x0x3e\x0x1fe\x0x1fe\0");
+  strcpy(rpiPowerIcon->text, "\x0\x0\x1\xe0\x7\xf8\xe\x1c\x1c\xe\x18\x6\x0\x3\xfe\x3\xfe\x3\x0\x3\x18\x6\x1c\xe\xe\x1c\x7\xf8\x3\xe0\x0\x0\0");
   
   //build main menu
   mainMenu->child = rpiPowerItem;
@@ -271,7 +271,13 @@ void renderText(char* text, char* oldText, XY position, XY size, XY colors) {
 }
 
 void renderLogo(Control* c) {
-
+  //TODO / WIP
+  int l = (c->size.x * c->size.y) / 8 /*bits*/;
+  Serial.print(l);
+  for (int i = 0; i < l; i++) {
+    Serial.print((int)&c->text[i]);
+    Serial.print("\n");
+  }
 }
 
 int renderItem(Control* item, int y_delta)
@@ -508,7 +514,7 @@ void loop() {
       }
     }
     pos = newPos;
-  } // if
+  }
 
   // Read the button state
   int btnState = digitalRead(ROTENC_SW);
@@ -525,7 +531,6 @@ void loop() {
     // Remember last button press event
     lastButtonPress = ms;
   }
-
   
   if (rpiPower) {
     //read serial data only when we know that power is sent to the Pi
@@ -558,7 +563,6 @@ void loop() {
 
   if (waitASec)
     delay(1000);
-
 }
 
 void swithRpiPower(Control* control) {
@@ -580,7 +584,6 @@ void swithRpiPower(Control* control) {
 void checkPosition() {
   encoder.tick(); // just call tick() to check the state.
 }
-
 
 void sendSerialText(Control* control) {
   Serial.print("HELLO FROM ARDUINO\n");
