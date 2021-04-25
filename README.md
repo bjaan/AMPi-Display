@@ -59,15 +59,15 @@ Use a 3.3V/5V level shifter! - as this Arduino Nano runs on 5V, while the displa
 ```
 mains --- power supply +--- 24V --- DC/DC Converter +--- 12V --- Audio level indicator
                        |                            |
-					   |                            +--- 12V --- DC/DC Converter +--- 5V --- Audio Relayboard --- 5V --- Audio Switch
-					   |                                                         |
-					   |                                                         +--- 5V --- Arduino Nano +--- 3.3V --- Display
-					   |                                                                                  |
-					   |                                                                                  +--- 3.3V --- Serial
-					   |
-					   +--- 24V --- USB Charger --- 5V --- Raspberry Pi -- 5V -- DAC
-					   |
-					   +--- 24V --- AMP Board
+                       |                            +--- 12V --- DC/DC Converter +--- 5V --- Audio Relayboard --- 5V --- Audio Switch
+                       |                                                         |
+                       |                                                         +--- 5V --- Arduino Nano +--- 3.3V --- Display
+                       |                                                                                  |
+                       |                                                                                  +--- 3.3V --- Serial
+                       |
+                       +--- 24V --- USB Charger --- 5V --- Raspberry Pi -- 5V -- DAC
+                       |
+                       |--- 24V --- AMP Board
 ```
 
 # Audio signal connections
@@ -77,7 +77,7 @@ DAC --------+--- Audio Relayboard --- Audio Transformer Board ---+--  Bluetooth 
             |                                                    |                                   |
 Analog 1 ---+                      Bluetooth Chip (AMP Board) ---+                                   +--- Audio level indicator
             |
-Analog 2 ---+            |
+Analog 2 ---+
             |
 Analog 3 ---+
 ```
