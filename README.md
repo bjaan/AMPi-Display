@@ -2,9 +2,9 @@
 
 AMPi is a project that integrates a mains electricity power supply with an audio amplifier, an 4-channel audio relay switcher, input audio transformers, a Raspberry PI with DAC, a ST7735 based TFT display, and an Arduino Nano (to control the Raspberry PI over serial and the built-in screen) to make a completely integrated digital audio solution that supports the latest high quality internet audio streaming and smart speaker AirPlay & Bluetooth 4.2 functionality over either wired Ethernet or Wi-Fi in one box.
 
-This repository is the code for the Arduino Nano. For the code running on Raspberry Pi, goto [AMPi-Service](https://bjaan.github.io/AMPi-Service/)
+This repository is the code for the Arduino Nano. For the code running on Raspberry Pi, go to [AMPi-Service](https://bjaan.github.io/AMPi-Service/)
 
-First prototype (WIP) with Raspberry Pi Model 3 and a Arduino Nano
+First prototype (WIP) with Raspberry Pi Model 3 and an Arduino Nano
 
 ![Front Side (first prototype)](https://raw.githubusercontent.com/bjaan/AMPi-Display/main/firstprototype-top.jpg)
 ![Back Side (first prototype)](https://raw.githubusercontent.com/bjaan/AMPi-Display/main/firstprototype-back.jpg)
@@ -81,7 +81,7 @@ Analog 2 ---+
 Analog 3 ---+
 ```
 					   
-# Hardware Parts used
+# Hardware parts used
 
 * [Douk Audio / Nobsound Bluetooth 4.2 TPA3116 Mini Digital Power Amplifier Board 100W*2](https://www.aliexpress.com/item/33012752276.html) ([link 2](https://www.aliexpress.com/item/33014190005.html)) - this board uses 2 TPA3116 chips one for each channel, hence it's more powerful.  It also implements two NE5532 Opamps as pre-amp 
 * [AZ-Delivery 1.77 inch SPI TFT display and 128x160 pixels for Arduino](https://www.az-delivery.de/en/products/1-77-zoll-spi-tft-display)
@@ -113,7 +113,7 @@ Analog 3 ---+
 * [Velleman Case WCAH2507 INSTRUMENT CASE](https://www.velleman.eu/products/view?id=17836) - GREY 250 x 190 x 80mm
 * Speakers - I used repaired 3-way ones from HECO/Summit from the early 80's
 
-Tools used:
+# Tools used
 * Soldering iron & Solder
 * Dremel to cut the aluminum & drill holes in the plates, back and front panel
 * [Fabric Adhesive Tape](https://www.aliexpress.com/item/4000235805659.html)
@@ -121,7 +121,9 @@ Tools used:
 * Hot glue (sorry, not sorry) to hold the VU-meter and Micro-SD Card Holder *strongly* in place
 * [Wire Cutters](https://www.aliexpress.com/item/32950629549.html)
 
-Notes from the TFT supplier in German.
+# Notes from the TFT supplier
+
+In German
 
     LEDA kann auch an 5V doch dann wird das Display sehr schnell sehr heiß - was ich nicht für optimal halte.
     Beim Betrieb mit 3.3V ist das Display nur minimal dunkler und bleibt kalt.
