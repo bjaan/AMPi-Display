@@ -1,7 +1,5 @@
 # AMPi-Display-Interface
 
-AMPi Arduino Nano code to control ST7735 TFT Screen and Rotary Encoder interface
-
 AMPi is a project that integrates a mains electricity power supply with an audio amplifier, an 4-channel audio relay switcher, input audio transformers, a Raspberry PI with DAC, a ST7735 based TFT display, and an Arduino Nano (to control the Raspberry PI over serial and the built-in screen) to make a completely integrated digital audio solution that supports the latest high quality internet audio streaming and smart speaker AirPlay & Bluetooth 4.2 functionality over either wired Ethernet or Wi-Fi in one box.
 
 This repository is the code for the Arduino Nano. For the code running on Raspberry Pi, goto [AMPi-Service](https://bjaan.github.io/AMPi-Service/)
@@ -16,11 +14,11 @@ First prototype (WIP) with Raspberry Pi Model 3 and a Arduino Nano
 * 2 x 100W Class D Audio Amplifier
 * 3 switchable analog audio channels using a relay array through a rotary switch
 * Audio level indicator
-* Clear audio using build-in pre-amp and audio transformers, to allow full galvanic seperation between the external audio equipement and AMPi
-* Computer controlled interface that controls screen, and the power of and the service running on the built-in audio streaming device
+* Clear audio using build-in pre-amp and audio transformers, to allow full galvanic separation between the external audio equipment and AMPi
+* Computer-controlled interface that controls screen, the power of and the service running on the built-in audio streaming device
 * Built-in power supply
-* AirPlay playback using (**Shairport Sync**](https://github.com/mikebrady/shairport-sync).  AMPi identifies itself as a AirPlay network player where you can connect your iPhone or Mac to play music.  You can also use iTunes on Windows 10 to play music or route your audio to AMPi using [**TuneBlade**](http://www.tuneblade.com/)
-* Bluetooth 4.2 Playback, this overrides everything and directly accesable after power-up
+* AirPlay playback using [**Shairport Sync**](https://github.com/mikebrady/shairport-sync).  AMPi identifies itself as a AirPlay network player where you can connect your iPhone or Mac to play music.  You can also use iTunes on Windows 10 to play music or route your audio to AMPi using [**TuneBlade**](http://www.tuneblade.com/)
+* Bluetooth 4.2 Playback, this overrides everything and directly accessible after power-up
 * Pandora.com music player (WIP), using [Pianobar](https://github.com/PromyLOPh/pianobar)
 
 # TODO / WIP
@@ -85,7 +83,7 @@ Analog 3 ---+
 					   
 # Hardware Parts used
 
-* [Douk Audio / Nobsound Bluetooth 4.2 TPA3116 Mini Digital Power Amplifier Board 100W*2](https://www.aliexpress.com/item/33012752276.html) ([link 2](https://www.aliexpress.com/item/33014190005.html)) - this board uses 2 TPA3116 chips one for each channel, hence it's more powerfull,  It also uses two NE5532 Opamps as pre-amp 
+* [Douk Audio / Nobsound Bluetooth 4.2 TPA3116 Mini Digital Power Amplifier Board 100W*2](https://www.aliexpress.com/item/33012752276.html) ([link 2](https://www.aliexpress.com/item/33014190005.html)) - this board uses 2 TPA3116 chips one for each channel, hence it's more powerful.  It also implements two NE5532 Opamps as pre-amp 
 * [AZ-Delivery 1.77 inch SPI TFT display and 128x160 pixels for Arduino](https://www.az-delivery.de/en/products/1-77-zoll-spi-tft-display)
 * [Audio Relay Switcher, modified to accept 5V](https://www.aliexpress.com/item/4000715642555.html) - essentially did not implement the voltage regulator as the LEDs & relays need 5V
 * Raspberry Pi, I used Model 3
