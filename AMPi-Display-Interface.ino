@@ -1,3 +1,7 @@
+//ICONS
+//tool to create - use 16x16 monochrome images & use invert colors
+const unsigned char IMG_POWER [] PROGMEM = { 0x01, 0x80, 0x01, 0x80, 0x01, 0x80, 0x0d, 0xb0, 0x1d, 0xb8, 0x39, 0x9c, 0x31, 0x8e, 0x60, 0x06, 0x60, 0x06, 0x60, 0x06, 0x60, 0x06, 0x30, 0x0c, 0x38, 0x1c, 0x1c, 0x38, 0x0f, 0xf0, 0x03, 0xc0 };
+const unsigned char IMG_AIRPLAY [] PROGMEM = { 0x07, 0xe0, 0x08, 0x10, 0x30, 0x0c, 0x43, 0xc2, 0x44, 0x22, 0x49, 0x92, 0x92, 0x49, 0x94, 0x29, 0x94, 0x29, 0x94, 0x29, 0x90, 0x09, 0x49, 0x92, 0x43, 0xc2, 0x27, 0xe4, 0x0f, 0xf0, 0x0f, 0xf0 };
 
 #include <Adafruit_ST7735.h>
 #include <Fonts/FreeSans9pt7b.h>
@@ -43,6 +47,7 @@ struct Control {
   XY size;
   XY colors;
   Events* events;
+  const unsigned char* icon;
   bool uptodate;
   Control* next;
   Control* parent;
@@ -58,10 +63,10 @@ struct Control {
       text[0] = 0;
       oldText = (char*)malloc(35);
       oldText[0] = 0;
-    } else {
+    } /*else {
       text = NULL;
       oldText = NULL;
-    }
+    }*/
     position = XY();
     size = XY();
     colors = XY();
@@ -72,10 +77,11 @@ struct Control {
       colors.x = ST7735_BLACK;
       colors.y = ST7735_BLACK;
     }
+    /*icon = NULL;*/
     uptodate = false;
-    next = NULL;
+    /*next = NULL;
     child = NULL;
-    events = NULL;
+    events = NULL;*/
   };
 };
 
@@ -154,16 +160,6 @@ void setup(void) {
   statusBar3->colors.x = tft.color565(40, 106, 237);
   statusBar3->colors.y = tft.color565(40, 106, 237);
   
-/*
-  rpiPowerLabel = new Control(TYPE_LABEL, mainControl);
-  rpiPowerLabel->position.x = 36;
-  rpiPowerLabel->position.y = 30;
-  rpiPowerLabel->size.x = 30;
-  rpiPowerLabel->size.y = 15;
-  rpiPowerLabel->colors.x = ST7735_WHITE;
-  rpiPowerLabel->colors.y = tft.color565(60, 62, 77);
-*/
-
   Control* ampiLabelMain = new Control(TYPE_LABEL, mainControl);
   ampiLabelMain->position.x = 3;
   ampiLabelMain->position.y = 22;
@@ -220,9 +216,20 @@ void setup(void) {
   Control* rpiPowerIcon = new Control(TYPE_ICON, mainControl);
   rpiPowerIcon->size.x = 16;
   rpiPowerIcon->size.y = 16;
-  rpiPowerIcon->position.x = 3+45/*AMPi label width*/+2;
-  rpiPowerIcon->position.y = 22;
-  strcpy(rpiPowerIcon->text, "\x0\x0\x1\xe0\x7\xf8\xe\x1c\x1c\xe\x18\x6\x0\x3\xfe\x3\xfe\x3\x0\x3\x18\x6\x1c\xe\xe\x1c\x7\xf8\x3\xe0\x0\x0\0");
+  rpiPowerIcon->position.x = 50;// 3+45/*AMPi label width*/+2
+  rpiPowerIcon->position.y = 8;
+  rpiPowerIcon->colors.x = tft.color565(255, 140, 26); 
+  rpiPowerIcon->colors.y = tft.color565(60, 62, 77);
+  rpiPowerIcon->icon = IMG_POWER;
+
+  Control* airplayIcon = new Control(TYPE_ICON, mainControl);
+  airplayIcon->size.x = 16;
+  airplayIcon->size.y = 16;
+  airplayIcon->position.x = 68;// 3+45/*AMPi label width*/+2+16/*icon width*/+2
+  airplayIcon->position.y = 8;
+  airplayIcon->colors.x = tft.color565(255, 140, 26); 
+  airplayIcon->colors.y = tft.color565(60, 62, 77);
+  airplayIcon->icon = IMG_AIRPLAY;
   
   //build main menu
   mainMenu->child = rpiPowerItem;
@@ -237,7 +244,8 @@ void setup(void) {
   statusLabel->next = ampiLabelMain;
   ampiLabelMain->next = mainMenu;
   mainMenu->next = rpiPowerIcon;
-  //rpiPowerIcon->next = null;
+  rpiPowerIcon->next = airplayIcon;
+  //airplayIcon->next = null;
 
   Serial.begin(9600); // open the serial port at 9600 bps:
 
@@ -270,14 +278,13 @@ void renderText(char* text, char* oldText, XY position, XY size, XY colors) {
   tft.fillRect(x, y + h, w, size.y - h, colors.y);
 }
 
-void renderLogo(Control* c) {
-  //TODO / WIP
-  int l = (c->size.x * c->size.y) / 8 /*bits*/;
-  Serial.print(l);
-  for (int i = 0; i < l; i++) {
-    Serial.print((int)&c->text[i]);
-    Serial.print("\n");
-  }
+int bit_test(char bit, char byte)
+{
+    bit = 1 << bit;
+    return(bit & byte);
+}
+void renderIcon(Control* c) {
+  tft.drawBitmap(c->position.x, c->position.y, c->icon, c->size.x, c->size.y, (c->visible ? c->colors.x : c->colors.y));
 }
 
 int renderItem(Control* item, int y_delta)
@@ -339,7 +346,7 @@ void render(Control* c) {
         }
         break;
       case TYPE_ICON:
-        renderLogo(c);
+        renderIcon(c);
         break;
       case TYPE_LIST:
         //background not shown tft.fillRect(c->position.x, c->position.y, c->size.x, c->size.y, ST7735_RED);
@@ -498,7 +505,6 @@ void sendEnter(Control* control) {
 }
 
 void loop() {
-  bool waitASec = false;
   unsigned long ms = millis();
 
   static int pos = 0;
@@ -525,7 +531,6 @@ void loop() {
     //button has been pressed, released and pressed again
     if (ms - lastButtonPress > 500) {
       sendClick();
-      waitASec = true;
     }
 
     // Remember last button press event
@@ -560,9 +565,6 @@ void loop() {
       renderGUI();
     }
   }
-
-  if (waitASec)
-    delay(1000);
 }
 
 void swithRpiPower(Control* control) {
