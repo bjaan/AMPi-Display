@@ -1,5 +1,4 @@
-//ICONS
-//tool to create - use 16x16 monochrome images & use invert colors
+//ICONS - tool to create - use 16x16 monochrome images & use invert colors
 const unsigned char IMG_POWER [] PROGMEM = { 0x01, 0x80, 0x01, 0x80, 0x01, 0x80, 0x0d, 0xb0, 0x1d, 0xb8, 0x39, 0x9c, 0x31, 0x8e, 0x60, 0x06, 0x60, 0x06, 0x60, 0x06, 0x60, 0x06, 0x30, 0x0c, 0x38, 0x1c, 0x1c, 0x38, 0x0f, 0xf0, 0x03, 0xc0 };
 const unsigned char IMG_AIRPLAY [] PROGMEM = { 0x07, 0xe0, 0x08, 0x10, 0x30, 0x0c, 0x43, 0xc2, 0x44, 0x22, 0x49, 0x92, 0x92, 0x49, 0x94, 0x29, 0x94, 0x29, 0x94, 0x29, 0x90, 0x09, 0x49, 0x92, 0x43, 0xc2, 0x27, 0xe4, 0x0f, 0xf0, 0x0f, 0xf0 };
 
@@ -12,12 +11,17 @@ const unsigned char IMG_AIRPLAY [] PROGMEM = { 0x07, 0xe0, 0x08, 0x10, 0x30, 0x0
 #define ROTENC_DT 3
 #define ROTENC_SW 4
 
+// GUI LIBARY DEFINITIONS
+
 #define TYPE_MAIN 1000
 #define TYPE_LABEL 100
 #define TYPE_RECTANGLE 200
 #define TYPE_LIST 300
 #define TYPE_ICON 400
 #define TYPE_ITEM 500
+
+#define MAX_MESSAGE 200
+#define MAX_TEXT 35
 
 struct Control;
 
@@ -58,15 +62,15 @@ struct Control {
     this->parent = parent;
     selected = false;
     visible = true;
-    if (type == TYPE_LABEL || type == TYPE_ITEM || type == TYPE_ICON) {
-      text = (char*)malloc(35);
+    if (type == TYPE_LABEL || type == TYPE_ITEM) {
+      text = (char*)malloc(MAX_TEXT);
       text[0] = 0;
-      oldText = (char*)malloc(35);
+      oldText = (char*)malloc(MAX_TEXT);
       oldText[0] = 0;
-    } /*else {
+    } else {
       text = NULL;
       oldText = NULL;
-    }*/
+    }
     position = XY();
     size = XY();
     colors = XY();
@@ -77,29 +81,45 @@ struct Control {
       colors.x = ST7735_BLACK;
       colors.y = ST7735_BLACK;
     }
-    /*icon = NULL;*/
+    icon = NULL;
     uptodate = false;
-    /*next = NULL;
+    next = NULL;
     child = NULL;
-    events = NULL;*/
+    events = NULL;
   };
 };
+
+// SIMPLE POINT-TO-POINT PROTOCOL FOR SERIAL DEFINITIONS
+
+#define PPP_BEGIN_FLAG 0x7E
+#define PPP_END_FLAG 0x7F
+#define PPP_T_POWER_ON_COMPLETE 0x50 //the letter P
+
+// DISPLAY & ROTARY ENCODE DEFINITIONS
 
 Adafruit_ST7735 tft = Adafruit_ST7735(10 /*cs*/, 9 /*dc*/, 11/*mosi*/, 13 /*sclk*/, -1 /*rst*/);
 
 RotaryEncoder encoder(ROTENC_CLK, ROTENC_DT, RotaryEncoder::LatchMode::TWO03);
 
+// GLOBALS
 int lastStateCLK;
 unsigned long lastGUIRender;
 bool rpiPower;
 bool lastRpiPower;
 bool guiuptodate;
 int lastButtonPress;
+unsigned char receiveBuffer[MAX_MESSAGE];
 Control* mainControl;
 Control* focusControl;
 Control* statusLabel;
-Control* rpiPowerLabel;
+Control* rpiPowerIcon;
 Control* mainMenu;
+
+// INITIALIZATION
+
+void checkPosition() {
+  encoder.tick(); // just call tick() to check the state.
+}
 
 void setup(void) {
 
@@ -213,13 +233,13 @@ void setup(void) {
   appleItem->colors.x = tft.color565(60, 62, 77);
   appleItem->colors.y = tft.color565(255, 140, 26);
 
-  Control* rpiPowerIcon = new Control(TYPE_ICON, mainControl);
+  rpiPowerIcon = new Control(TYPE_ICON, mainControl);
   rpiPowerIcon->size.x = 16;
   rpiPowerIcon->size.y = 16;
   rpiPowerIcon->position.x = 50;// 3+45/*AMPi label width*/+2
   rpiPowerIcon->position.y = 8;
-  rpiPowerIcon->colors.x = tft.color565(255, 140, 26); 
-  rpiPowerIcon->colors.y = tft.color565(60, 62, 77);
+  rpiPowerIcon->colors.x = tft.color565(255, 140, 26);
+  rpiPowerIcon->colors.y = ST7735_WHITE; 
   rpiPowerIcon->icon = IMG_POWER;
 
   Control* airplayIcon = new Control(TYPE_ICON, mainControl);
@@ -227,8 +247,8 @@ void setup(void) {
   airplayIcon->size.y = 16;
   airplayIcon->position.x = 68;// 3+45/*AMPi label width*/+2+16/*icon width*/+2
   airplayIcon->position.y = 8;
-  airplayIcon->colors.x = tft.color565(255, 140, 26); 
-  airplayIcon->colors.y = tft.color565(60, 62, 77);
+  airplayIcon->colors.x = tft.color565(255, 140, 26);
+  airplayIcon->colors.y = ST7735_WHITE; 
   airplayIcon->icon = IMG_AIRPLAY;
   
   //build main menu
@@ -251,6 +271,8 @@ void setup(void) {
 
   renderGUI();
 }
+
+// GUI LIBARY IMPLEMENTATION
 
 void renderText(char* text, char* oldText, XY position, XY size, XY colors) {
   int x;
@@ -278,13 +300,8 @@ void renderText(char* text, char* oldText, XY position, XY size, XY colors) {
   tft.fillRect(x, y + h, w, size.y - h, colors.y);
 }
 
-int bit_test(char bit, char byte)
-{
-    bit = 1 << bit;
-    return(bit & byte);
-}
 void renderIcon(Control* c) {
-  tft.drawBitmap(c->position.x, c->position.y, c->icon, c->size.x, c->size.y, (c->visible ? c->colors.x : c->colors.y));
+  tft.drawBitmap(c->position.x, c->position.y, c->icon, c->size.x, c->size.y, c->colors.x);
 }
 
 int renderItem(Control* item, int y_delta)
@@ -385,6 +402,9 @@ void renderGUI() {
   lastGUIRender = millis();
 }
 
+void swapXY(XY* xy) {
+  int t = xy->x; xy->x = xy->y; xy->y = t;
+}
 void enterMenu(Control* control) {
   if (focusControl) {
     focusControl->selected = false;
@@ -403,8 +423,7 @@ void moveMenu(Control* control, bool directionDown) {
   if (control->child) {
     int s = -1; //selected index
     int c = 0; //count
-    //find index s that is selected
-    Control* item = control->child;
+    Control* item = control->child; //find index s that is selected
     int i = 0;
     while (item) {
       c++;
@@ -414,11 +433,10 @@ void moveMenu(Control* control, bool directionDown) {
       i++;
       item = item->next;
     }
-    //move according direction
     if (s == -1) {
       s = 0;
     } else {
-      if (directionDown == false) {
+      if (directionDown == false) { //move according to direction
         if (s > 0) {
           s--;
         } else {
@@ -504,6 +522,8 @@ void sendEnter(Control* control) {
       control->events->onEnter(control);
 }
 
+// MAIN LOOP
+
 void loop() {
   unsigned long ms = millis();
 
@@ -521,51 +541,54 @@ void loop() {
     }
     pos = newPos;
   }
+ 
+  int btnState = digitalRead(ROTENC_SW); //read the button state
 
-  // Read the button state
-  int btnState = digitalRead(ROTENC_SW);
-
-  //If we detect LOW signal, button is pressed
-  if (btnState == LOW) {
-    //if 500ms have passed since last LOW pulse, it means that the
-    //button has been pressed, released and pressed again
-    if (ms - lastButtonPress > 500) {
+  if (btnState == LOW) { //if we detect LOW signal, button is pressed
+    if (ms - lastButtonPress > 500) { //if 500ms have passed since last LOW pulse, it means that the button has been pressed, released and pressed again
       sendClick();
     }
-
-    // Remember last button press event
-    lastButtonPress = ms;
-  }
-  
-  if (rpiPower) {
-    //read serial data only when we know that power is sent to the Pi
-    if (Serial.available()) {
-      #define MAX_MESSAGE 200
-      static char buffer[MAX_MESSAGE];
-      static unsigned char index = 0;
-      char inch;
-      while (Serial.available() > 0) {
-        inch = Serial.read();
-        if (inch == '\n') {
-          buffer[index] = 0;
-          break;
-        } else {        
-          if (index < MAX_MESSAGE-1) {
-            buffer[index++] = inch;
-          }
-        }
-      }
-      buffer[index] = 0;
-      receiveSerialText(&buffer[0]);
-    }
-   }
+    lastButtonPress = ms; //remember last button press event
+  } 
 
   if (!guiuptodate) {
     if (ms - lastGUIRender > 300) { //wait at least 300ms between updates
       renderGUI();
     }
   }
+
+  if (rpiPower) { //when we know that power is sent to the Pi
+    if (Serial.available()) {  //read serial data only 
+      unsigned char ch;
+      unsigned char index;
+      bool reading = false;
+      while (Serial.available() > 0) {
+        ch = Serial.read();
+        if (ch == PPP_BEGIN_FLAG) {
+          if (!reading) {
+            reading = true;
+            index = 1;
+          } else if (ch == PPP_END_FLAG) {
+            receiveBuffer[0] = index+1;
+            receiveBuffer[index] = 0;
+            break;
+          }
+        } else {        
+          if (index < MAX_MESSAGE-1) {
+            receiveBuffer[index++] = ch;
+          } else {
+            reading = false; //too big - ignore packet
+            //TODO send failure - request to resend
+          }
+        }
+      }
+      receiveBuffer[index] = 0;
+      processReceiveBuffer();
+    }
+  }
 }
+
+// GUI ACTIONS
 
 void swithRpiPower(Control* control) {
   rpiPower = !rpiPower;
@@ -583,22 +606,24 @@ void swithRpiPower(Control* control) {
   guiuptodate = false;
 }
 
-void checkPosition() {
-  encoder.tick(); // just call tick() to check the state.
-}
-
-void sendSerialText(Control* control) {
+void sendSerialText(Control* control) { 
   Serial.print("HELLO FROM ARDUINO\n");
   Serial.flush();
 }
 
-void receiveSerialText(char* text) {
-   //Serial.print(text);
-    /*status update*/
-    //sprintf(statusLabel->text, "SIN: %s\0", text);
-    //strcpy(statusLabel->text, "RECEIVED!\n");
-    strcpy(statusLabel->text, text);
-    statusLabel->uptodate = false;
-    guiuptodate = false; //request GUI update
-    /*end status update*/
+void processReceiveBuffer() {
+  //first byte to expected the length of the packet/buffer - second byte to be expected signal/command type
+  switch (receiveBuffer[1]) {
+    case PPP_T_POWER_ON_COMPLETE:
+      strcpy(statusLabel->text, "Steamer is on\n");
+
+      swapXY(&(rpiPowerIcon->colors));
+      rpiPowerIcon->uptodate = false;
+      break;
+    default:
+      strcpy(statusLabel->text, "T_NOT_IMPL'D\n");
+      break;
+  }
+  statusLabel->uptodate = false;
+  guiuptodate = false; //request GUI update
 }
