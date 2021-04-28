@@ -2,7 +2,7 @@
 
 AMPi is a project that integrates a mains electricity power supply with an audio amplifier, an 4-channel audio relay switcher, input audio transformers, a Raspberry PI with DAC, a ST7735 based TFT display, and an Arduino Nano (to control the Raspberry Pi over serial and the built-in screen) to make a completely integrated digital audio solution that supports the latest high quality internet audio streaming and smart speaker AirPlay & Bluetooth 4.2 functionality over either wired Ethernet or Wi-Fi in one box.
 
-This repository is the code for the Arduino Nano. For the code running on Raspberry Pi, go to [AMPi-Service](https://bjaan.github.io/AMPi-Service/)
+This repository is the code for the Arduino Nano. For the code running on Raspberry Pi, go to [AMPi-Service](https://github.com/bjaan/AMPi-Service/)
 
 First prototype (WIP) with Raspberry Pi Model 3 and an Arduino Nano
 
