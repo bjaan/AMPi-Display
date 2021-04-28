@@ -1,4 +1,4 @@
-//ICONS - tool to create - use 16x16 monochrome images & use invert colors
+//ICONS - tool to create at http://javl.github.io/image2cpp/ - use 16x16 monochrome images & use invert colors
 const unsigned char IMG_POWER [] PROGMEM = { 0x01, 0x80, 0x01, 0x80, 0x01, 0x80, 0x0d, 0xb0, 0x1d, 0xb8, 0x39, 0x9c, 0x31, 0x8e, 0x60, 0x06, 0x60, 0x06, 0x60, 0x06, 0x60, 0x06, 0x30, 0x0c, 0x38, 0x1c, 0x1c, 0x38, 0x0f, 0xf0, 0x03, 0xc0 };
 const unsigned char IMG_AIRPLAY [] PROGMEM = { 0x07, 0xe0, 0x08, 0x10, 0x30, 0x0c, 0x43, 0xc2, 0x44, 0x22, 0x49, 0x92, 0x92, 0x49, 0x94, 0x29, 0x94, 0x29, 0x94, 0x29, 0x90, 0x09, 0x49, 0x92, 0x43, 0xc2, 0x27, 0xe4, 0x0f, 0xf0, 0x0f, 0xf0 };
 
@@ -107,7 +107,7 @@ unsigned long lastGUIRender;
 bool rpiPower;
 bool lastRpiPower;
 bool guiuptodate;
-int lastButtonPress;
+bool buttonDown;
 unsigned char receiveBuffer[MAX_MESSAGE];
 Control* mainControl;
 Control* focusControl;
@@ -134,12 +134,13 @@ void setup(void) {
   digitalWrite(RPI_POWER, LOW); //off
   rpiPower = false;
   lastRpiPower = true;
+  buttonDown = false;
 
   //initialize encoder
   attachInterrupt(ROTENC_CLK, checkPosition, CHANGE);
   attachInterrupt(ROTENC_DT, checkPosition, CHANGE);
   pinMode(ROTENC_SW, INPUT_PULLUP);
-  lastButtonPress = millis();
+
 
   //initialize GUI
   mainControl = new Control(TYPE_MAIN, NULL /** root - no parent **/);
@@ -545,11 +546,13 @@ void loop() {
   int btnState = digitalRead(ROTENC_SW); //read the button state
 
   if (btnState == LOW) { //if we detect LOW signal, button is pressed
-    if (ms - lastButtonPress > 500) { //if 500ms have passed since last LOW pulse, it means that the button has been pressed, released and pressed again
+    if (!buttonDown) { //if 500ms have passed since last LOW pulse, it means that the button has been pressed, released and pressed again
       sendClick();
     }
-    lastButtonPress = ms; //remember last button press event
-  } 
+    buttonDown = true;
+  } else {
+    buttonDown = false; 
+  }
 
   if (!guiuptodate) {
     if (ms - lastGUIRender > 300) { //wait at least 300ms between updates
