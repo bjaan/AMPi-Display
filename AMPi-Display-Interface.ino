@@ -10,6 +10,10 @@ const unsigned char IMG_AIRPLAY [] PROGMEM = { 0x07, 0xe0, 0x08, 0x10, 0x30, 0x0
 #define ROTENC_CLK 2
 #define ROTENC_DT 3
 #define ROTENC_SW 4
+#define COLOR_RED 64611 /*tft.color565(255, 140, 26)*/
+#define COLOR_BLUE_DARK 14825 /*tft.color565(60, 62, 77)*/
+#define COLOR_BLUE 11101 /*tft.color565(40, 106, 237)*/
+#define COLOR_GREY_DARK 2145 /*tft.color565(12, 12, 13)*/
 
 // GUI LIBARY DEFINITIONS
 
@@ -144,7 +148,7 @@ void setup(void) {
 
   //initialize GUI
   mainControl = new Control(TYPE_MAIN, NULL /** root - no parent **/);
-  mainControl->colors.y = tft.color565(60, 62, 77);
+  mainControl->colors.y = COLOR_BLUE_DARK;
   guiuptodate = false;
 
   //initialize status bar
@@ -155,31 +159,31 @@ void setup(void) {
   statusLabel->size.x = 154; //160 - 6;
   statusLabel->size.y = 15;
   statusLabel->colors.x = ST7735_WHITE;
-  statusLabel->colors.y = tft.color565(40, 106, 237);
+  statusLabel->colors.y = COLOR_BLUE;
 
   Control* statusBar = new Control(TYPE_RECTANGLE, mainControl);
   statusBar->position.x = 0;
   statusBar->position.y = 96;//128 - 32;
   statusBar->size.x = 160;
   statusBar->size.y = 17;
-  statusBar->colors.x = tft.color565(60, 62, 77);
-  statusBar->colors.y = tft.color565(40, 106, 237);
+  statusBar->colors.x = COLOR_BLUE_DARK;
+  statusBar->colors.y = COLOR_BLUE;
 
   Control* statusBar2 = new Control(TYPE_RECTANGLE, mainControl);
   statusBar2->position.x = 0;
   statusBar2->position.y = 0;
   statusBar2->size.x = 160;
   statusBar2->size.y = 15;
-  statusBar2->colors.x = tft.color565(40, 106, 237);
-  statusBar2->colors.y = tft.color565(12, 12, 13);
+  statusBar2->colors.x = COLOR_BLUE;
+  statusBar2->colors.y = COLOR_GREY_DARK;
 
   Control* statusBar3 = new Control(TYPE_RECTANGLE, mainControl);
   statusBar3->position.x = 0;
   statusBar3->position.y = 113;
   statusBar3->size.x = 160;
   statusBar3->size.y = 15;
-  statusBar3->colors.x = tft.color565(40, 106, 237);
-  statusBar3->colors.y = tft.color565(40, 106, 237);
+  statusBar3->colors.x = COLOR_BLUE;
+  statusBar3->colors.y = COLOR_BLUE;
   
   Control* ampiLabelMain = new Control(TYPE_LABEL, mainControl);
   ampiLabelMain->position.x = 3;
@@ -187,8 +191,8 @@ void setup(void) {
   ampiLabelMain->size.x = 45;
   ampiLabelMain->size.y = 15;
   strcpy(ampiLabelMain->text, "AMPi\0");
-  ampiLabelMain->colors.x = tft.color565(255, 140, 26);
-  ampiLabelMain->colors.y = tft.color565(60, 62, 77);
+  ampiLabelMain->colors.x = COLOR_RED;
+  ampiLabelMain->colors.y = COLOR_BLUE_DARK;
     
   mainMenu = new Control(TYPE_LIST, mainControl);
   mainMenu->position.x = 3;
@@ -196,7 +200,7 @@ void setup(void) {
   mainMenu->size.x = 154; // 160 - 6;
   mainMenu->size.y = 73;
   mainMenu->colors.x = ST7735_WHITE;
-  mainMenu->colors.y = tft.color565(60, 62, 77);
+  mainMenu->colors.y = COLOR_BLUE_DARK;
   mainMenu->events = new Events();
   mainMenu->events->onEnter = enterMenu;
 
@@ -207,8 +211,8 @@ void setup(void) {
   strcpy(rpiPowerItem->text, "Turn Streamer On\0");
   rpiPowerItem->position.x = 1;
   rpiPowerItem->position.y = 11;
-  rpiPowerItem->colors.x = tft.color565(60, 62, 77);
-  rpiPowerItem->colors.y = tft.color565(255, 140, 26);
+  rpiPowerItem->colors.x = COLOR_BLUE_DARK;
+  rpiPowerItem->colors.y = COLOR_RED;
   rpiPowerItem->events = new Events();
   rpiPowerItem->events->onClick = swithRpiPower;
 
@@ -219,8 +223,8 @@ void setup(void) {
   strcpy(pandoraItem->text, "Pandora Music\0");
   pandoraItem->position.x = 1;
   pandoraItem->position.y = 11;
-  pandoraItem->colors.x = tft.color565(60, 62, 77);
-  pandoraItem->colors.y = tft.color565(255, 140, 26);
+  pandoraItem->colors.x = COLOR_BLUE_DARK;
+  pandoraItem->colors.y = COLOR_RED;
   pandoraItem->events = new Events();
   pandoraItem->events->onClick = sendSerialText;
 
@@ -231,16 +235,15 @@ void setup(void) {
   strcpy(appleItem->text, "Apple Music\0");
   appleItem->position.x = 1;
   appleItem->position.y = 11;
-  appleItem->colors.x = tft.color565(60, 62, 77);
-  appleItem->colors.y = tft.color565(255, 140, 26);
+  appleItem->colors.x = COLOR_BLUE_DARK;
+  appleItem->colors.y = COLOR_RED;
 
   rpiPowerIcon = new Control(TYPE_ICON, mainControl);
   rpiPowerIcon->size.x = 16;
   rpiPowerIcon->size.y = 16;
   rpiPowerIcon->position.x = 50;// 3+45/*AMPi label width*/+2
   rpiPowerIcon->position.y = 8;
-  rpiPowerIcon->colors.x = tft.color565(255, 140, 26);
-  rpiPowerIcon->colors.y = ST7735_WHITE; 
+  rpiPowerIcon->colors.x = COLOR_RED;
   rpiPowerIcon->icon = IMG_POWER;
 
   Control* airplayIcon = new Control(TYPE_ICON, mainControl);
@@ -248,8 +251,7 @@ void setup(void) {
   airplayIcon->size.y = 16;
   airplayIcon->position.x = 68;// 3+45/*AMPi label width*/+2+16/*icon width*/+2
   airplayIcon->position.y = 8;
-  airplayIcon->colors.x = tft.color565(255, 140, 26);
-  airplayIcon->colors.y = ST7735_WHITE; 
+  airplayIcon->colors.x = COLOR_RED;
   airplayIcon->icon = IMG_AIRPLAY;
   
   //build main menu
@@ -302,6 +304,9 @@ void renderText(char* text, char* oldText, XY position, XY size, XY colors) {
 }
 
 void renderIcon(Control* c) {
+  Serial.print("RENDER ICON ");
+  Serial.print(c->colors.x);
+  Serial.print("\n");
   tft.drawBitmap(c->position.x, c->position.y, c->icon, c->size.x, c->size.y, c->colors.x);
 }
 
@@ -403,8 +408,8 @@ void renderGUI() {
   lastGUIRender = millis();
 }
 
-void swapXY(XY* xy) {
-  int t = xy->x; xy->x = xy->y; xy->y = t;
+void swapXY(XY &xy) {
+  int t = xy.x; xy.x = xy.y; xy.y = t;
 }
 void enterMenu(Control* control) {
   if (focusControl) {
@@ -526,8 +531,6 @@ void sendEnter(Control* control) {
 // MAIN LOOP
 
 void loop() {
-  unsigned long ms = millis();
-
   static int pos = 0;
   encoder.tick();
 
@@ -552,12 +555,6 @@ void loop() {
     buttonDown = true;
   } else {
     buttonDown = false; 
-  }
-
-  if (!guiuptodate) {
-    if (ms - lastGUIRender > 300) { //wait at least 300ms between updates
-      renderGUI();
-    }
   }
 
   if (rpiPower) { //when we know that power is sent to the Pi
@@ -589,6 +586,12 @@ void loop() {
       processReceiveBuffer();
     }
   }
+  
+  if (!guiuptodate) {
+    if (millis() - lastGUIRender > 50) { //wait at least 50ms between updates
+      renderGUI();
+    }
+  }
 }
 
 // GUI ACTIONS
@@ -610,23 +613,31 @@ void swithRpiPower(Control* control) {
 }
 
 void sendSerialText(Control* control) { 
-  Serial.print("HELLO FROM ARDUINO\n");
-  Serial.flush();
+  //Serial.print("HELLO FROM ARDUINO\n");
+  //Serial.flush();
+  swapXY(rpiPowerIcon->colors);
+  rpiPowerIcon->uptodate = false;
+  guiuptodate = false;
 }
 
 void processReceiveBuffer() {
   //first byte to expected the length of the packet/buffer - second byte to be expected signal/command type
   switch (receiveBuffer[1]) {
     case PPP_T_POWER_ON_COMPLETE:
-      strcpy(statusLabel->text, "Steamer is on\n");
-
-      swapXY(&(rpiPowerIcon->colors));
+      strcpy(statusLabel->text, "Steamer is ready\n");
+      statusLabel->uptodate = false;
+      
+      swapXY(rpiPowerIcon->colors);
+      rpiPowerIcon->colors.x = ST7735_WHITE;
       rpiPowerIcon->uptodate = false;
+      
+      guiuptodate = false; //request GUI update
       break;
     default:
       strcpy(statusLabel->text, "T_NOT_IMPL'D\n");
+      statusLabel->uptodate = false;
+      
+      guiuptodate = false; //request GUI update
       break;
-  }
-  statusLabel->uptodate = false;
-  guiuptodate = false; //request GUI update
+  }  
 }
