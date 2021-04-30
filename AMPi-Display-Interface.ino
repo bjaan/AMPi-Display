@@ -2,9 +2,9 @@
 const unsigned char IMG_POWER [] PROGMEM = { 0x01, 0x80, 0x01, 0x80, 0x01, 0x80, 0x0d, 0xb0, 0x1d, 0xb8, 0x39, 0x9c, 0x31, 0x8e, 0x60, 0x06, 0x60, 0x06, 0x60, 0x06, 0x60, 0x06, 0x30, 0x0c, 0x38, 0x1c, 0x1c, 0x38, 0x0f, 0xf0, 0x03, 0xc0 };
 const unsigned char IMG_AIRPLAY [] PROGMEM = { 0x07, 0xe0, 0x08, 0x10, 0x30, 0x0c, 0x43, 0xc2, 0x44, 0x22, 0x49, 0x92, 0x92, 0x49, 0x94, 0x29, 0x94, 0x29, 0x94, 0x29, 0x90, 0x09, 0x49, 0x92, 0x43, 0xc2, 0x27, 0xe4, 0x0f, 0xf0, 0x0f, 0xf0 };
 
-#include <Adafruit_ST7735.h>
-#include <Fonts/FreeSans9pt7b.h>
-#include <RotaryEncoder.h>
+#include <Adafruit_ST7735.h> //see https://github.com/adafruit/Adafruit-ST7735-Library
+#include <Fonts/FreeSans9pt7b.h> //font available in the above libary
+#include <RotaryEncoder.h> //see http://www.mathertel.de/Arduino/RotaryEncoderLibrary.aspx
 
 #define RPI_POWER 8
 #define ROTENC_CLK 2
@@ -17,67 +17,48 @@ const unsigned char IMG_AIRPLAY [] PROGMEM = { 0x07, 0xe0, 0x08, 0x10, 0x30, 0x0
 
 // GUI LIBARY DEFINITIONS
 
-#define TYPE_MAIN 1000
-#define TYPE_LABEL 100
-#define TYPE_RECTANGLE 200
-#define TYPE_LIST 300
-#define TYPE_ICON 400
-#define TYPE_ITEM 500
+#define TYPE_MAIN 100
+#define TYPE_LABEL 10
+#define TYPE_RECTANGLE 20
+#define TYPE_LIST 30
+#define TYPE_ICON 40
+#define TYPE_ITEM 50
 
 #define MAX_MESSAGE 200
 #define MAX_TEXT 35
 
 struct Control;
 
-struct XY {
-  int x;
-  int y;
-  XY() {
-    x = 0; y = 0;
-  };
-};
-
+struct XY { word x = 0; word y = 0; };
+struct Colors { int x = 0; int y = 0; };
 typedef void (*Event) (Control* control);
-
-struct Events {
-  Event onClick;
-  Event onEnter;
-  Event onExit;
-};
+struct Events { Event onClick; Event onEnter; Event onExit; };
 
 struct Control {
-  int type;
-  bool selected;
-  bool visible;
-  char* text;
-  char* oldText;
-  XY position;
-  XY size;
-  XY colors;
-  Events* events;
-  const unsigned char* icon;
-  bool uptodate;
-  Control* next;
-  Control* parent;
-  Control* child;
+  byte type;
+  bool selected = false;
+  bool visible = true;
+  char* text = NULL;
+  char* oldText = NULL;
+  XY position = XY();
+  XY size = XY();
+  Colors colors = Colors();
+  Events* events  = NULL;
+  const unsigned char* icon  = NULL;
+  bool uptodate = false;
+  Control* next = NULL;
+  Control* parent = NULL;
+  Control* child = NULL;
 
-  Control(int type, Control* parent) {
+  Control(byte type, Control* parent) {
     this->type = type;
     this->parent = parent;
-    selected = false;
-    visible = true;
     if (type == TYPE_LABEL || type == TYPE_ITEM) {
       text = (char*)malloc(MAX_TEXT);
       text[0] = 0;
       oldText = (char*)malloc(MAX_TEXT);
       oldText[0] = 0;
-    } else {
-      text = NULL;
-      oldText = NULL;
     }
-    position = XY();
-    size = XY();
-    colors = XY();
     if (type != TYPE_RECTANGLE) {
       colors.x = ST7735_WHITE;
       colors.y = ST7735_BLACK;
@@ -85,11 +66,6 @@ struct Control {
       colors.x = ST7735_BLACK;
       colors.y = ST7735_BLACK;
     }
-    icon = NULL;
-    uptodate = false;
-    next = NULL;
-    child = NULL;
-    events = NULL;
   };
 };
 
@@ -97,7 +73,9 @@ struct Control {
 
 #define PPP_BEGIN_FLAG 0x7E
 #define PPP_END_FLAG 0x7F
-#define PPP_T_POWER_ON_COMPLETE 0x50 //the letter P
+#define PPP_T_NO_OPERATION 0x00
+#define PPP_T_POWER_ON_COMPLETE 0x50 //P
+#define PPP_T_AIRPLAY_STATUS 0x52 //R
 
 // DISPLAY & ROTARY ENCODE DEFINITIONS
 
@@ -106,17 +84,18 @@ Adafruit_ST7735 tft = Adafruit_ST7735(10 /*cs*/, 9 /*dc*/, 11/*mosi*/, 13 /*sclk
 RotaryEncoder encoder(ROTENC_CLK, ROTENC_DT, RotaryEncoder::LatchMode::TWO03);
 
 // GLOBALS
-int lastStateCLK;
 unsigned long lastGUIRender;
-bool rpiPower;
-bool lastRpiPower;
-bool guiuptodate;
-bool buttonDown;
+bool rpiPower = false;
+bool lastRpiPower = true;
+bool guiuptodate = false;
+bool buttonDown = false;
+int encoderPosition = 0;
 unsigned char receiveBuffer[MAX_MESSAGE];
 Control* mainControl;
 Control* focusControl;
 Control* statusLabel;
 Control* rpiPowerIcon;
+Control* airplayIcon;
 Control* mainMenu;
 
 // INITIALIZATION
@@ -126,7 +105,6 @@ void checkPosition() {
 }
 
 void setup(void) {
-
   tft.initR(INITR_BLACKTAB);
 
   tft.setRotation(1);
@@ -136,15 +114,11 @@ void setup(void) {
   //RPi Power
   pinMode(RPI_POWER, OUTPUT);    // sets the digital pin 2 as output
   digitalWrite(RPI_POWER, LOW); //off
-  rpiPower = false;
-  lastRpiPower = true;
-  buttonDown = false;
 
   //initialize encoder
   attachInterrupt(ROTENC_CLK, checkPosition, CHANGE);
   attachInterrupt(ROTENC_DT, checkPosition, CHANGE);
   pinMode(ROTENC_SW, INPUT_PULLUP);
-
 
   //initialize GUI
   mainControl = new Control(TYPE_MAIN, NULL /** root - no parent **/);
@@ -246,7 +220,7 @@ void setup(void) {
   rpiPowerIcon->colors.x = COLOR_RED;
   rpiPowerIcon->icon = IMG_POWER;
 
-  Control* airplayIcon = new Control(TYPE_ICON, mainControl);
+  airplayIcon = new Control(TYPE_ICON, mainControl);
   airplayIcon->size.x = 16;
   airplayIcon->size.y = 16;
   airplayIcon->position.x = 68;// 3+45/*AMPi label width*/+2+16/*icon width*/+2
@@ -277,11 +251,11 @@ void setup(void) {
 
 // GUI LIBARY IMPLEMENTATION
 
-void renderText(char* text, char* oldText, XY position, XY size, XY colors) {
-  int x;
-  int y;
-  uint16_t w;
-  uint16_t h;
+void renderText(char* text, char* oldText, XY position, XY size, Colors colors) {
+  word x;
+  word y;
+  word w;
+  word h;
   if (text)
     tft.getTextBounds(text, position.x, position.y, &x, &y, &w, &h);
   if (oldText[0] != 0) {
@@ -304,13 +278,10 @@ void renderText(char* text, char* oldText, XY position, XY size, XY colors) {
 }
 
 void renderIcon(Control* c) {
-  Serial.print("RENDER ICON ");
-  Serial.print(c->colors.x);
-  Serial.print("\n");
   tft.drawBitmap(c->position.x, c->position.y, c->icon, c->size.x, c->size.y, c->colors.x);
 }
 
-int renderItem(Control* item, int y_delta)
+word renderItem(Control* item, int y_delta)
 {
   if (!item->uptodate) {
     //item position X = top & bottom & left & right item/list border & text extra right
@@ -354,13 +325,13 @@ void render(Control* c) {
         if (c->colors.x == c->colors.y)
           tft.fillRect(c->position.x, c->position.y, c->size.x, c->size.y, c->colors.y);
         else {
-          word delta_r = ((c->colors.y >> 11 & 31) - (c->colors.x >> 11 & 31)) / c->size.y;
-          word delta_g = ((c->colors.y >> 5 & 63) - (c->colors.x >> 5 & 63)) / c->size.y;
-          word delta_b = ((c->colors.y >> 0 & 31) - (c->colors.x >> 0 & 31)) / c->size.y;
+          word delta_r = ((c->colors.y >> 11 & 31) - (c->colors.x >> 11 & 31)) / (int)c->size.y;
+          word delta_g = ((c->colors.y >> 5 & 63) - (c->colors.x >> 5 & 63)) / (int)c->size.y;
+          word delta_b = ((c->colors.y >> 0 & 31) - (c->colors.x >> 0 & 31)) / (int)c->size.y;
           word col_r = (c->colors.x >> 11 & 31);
           word col_g = (c->colors.x >> 5 & 63);
           word col_b = (c->colors.x >> 0 & 31);
-          for (int i = 0; i < c->size.y; i++) {
+          for (word i = 0; i < c->size.y; i++) {
             tft.drawFastHLine( c->position.x, c->position.y + i, c->size.x, (col_r << 11 | col_g << 5 | col_b << 0));
             col_r += delta_r;
             col_g += delta_g;
@@ -374,7 +345,7 @@ void render(Control* c) {
       case TYPE_LIST:
         //background not shown tft.fillRect(c->position.x, c->position.y, c->size.x, c->size.y, ST7735_RED);
         Control* i = c->child;
-        int y_delta = 0;
+        word y_delta = 0;
         while (i) {
           if (i->visible)
             y_delta += renderItem(i, y_delta);
@@ -409,8 +380,9 @@ void renderGUI() {
 }
 
 void swapXY(XY &xy) {
-  int t = xy.x; xy.x = xy.y; xy.y = t;
+  word t = xy.x; xy.x = xy.y; xy.y = t;
 }
+
 void enterMenu(Control* control) {
   if (focusControl) {
     focusControl->selected = false;
@@ -427,10 +399,10 @@ void enterMenu(Control* control) {
 
 void moveMenu(Control* control, bool directionDown) {
   if (control->child) {
-    int s = -1; //selected index
-    int c = 0; //count
+    word s = 0; //selected index   0 is nothing selected
+    word c = 0; //count
     Control* item = control->child; //find index s that is selected
-    int i = 0;
+    word i = 1;
     while (item) {
       c++;
       if (item->selected) {
@@ -439,26 +411,22 @@ void moveMenu(Control* control, bool directionDown) {
       i++;
       item = item->next;
     }
-    if (s == -1) {
-      s = 0;
-    } else {
-      if (directionDown == false) { //move according to direction
-        if (s > 0) {
-          s--;
-        } else {
-          s = c - 1;
-        }
+    if (directionDown == false) { //move according to direction
+      if (s > 1) {
+        s--;
       } else {
-        if (s < c - 1) {
-          s++;
-        } else {
-          s = 0;
-        }
+        s = c;
+      }
+    } else {
+      if (s < c) {
+        s++;
+      } else {
+        s = 1;
       }
     }
     //switch
     item = control->child;
-    i = 0;
+    i = 1;
     while (item) {
       if (i == s) {
         if (!item->selected) {
@@ -531,19 +499,17 @@ void sendEnter(Control* control) {
 // MAIN LOOP
 
 void loop() {
-  static int pos = 0;
   encoder.tick();
-
   int newPos = encoder.getPosition();
-  if (pos != newPos) {
-    if (pos % 2 == 0) {
-      if (pos < newPos) {
+  if (encoderPosition != newPos) {
+    if (encoderPosition % 2 == 0) {
+      if (encoderPosition < newPos) {
         sendUp();
       } else {
         sendDown();
       }
     }
-    pos = newPos;
+    encoderPosition = newPos;
   }
  
   int btnState = digitalRead(ROTENC_SW); //read the button state
@@ -560,30 +526,29 @@ void loop() {
   if (rpiPower) { //when we know that power is sent to the Pi
     if (Serial.available()) {  //read serial data only 
       unsigned char ch;
-      unsigned char index;
+      unsigned char index = 1;
       bool reading = false;
       while (Serial.available() > 0) {
-        ch = Serial.read();
-        if (ch == PPP_BEGIN_FLAG) {
-          if (!reading) {
-            reading = true;
-            index = 1;
-          } else if (ch == PPP_END_FLAG) {
-            receiveBuffer[0] = index+1;
-            receiveBuffer[index] = 0;
+        ch = Serial.read(); //FIXME not working anymore trying to fix other bugs
+        if (ch == PPP_BEGIN_FLAG) { //always start reading when this byte is received
+          reading = true;
+          index = 1;
+        } else if (ch == PPP_END_FLAG) { //only when reading and this byte is received process the message
+          if(reading) {
+            receiveBuffer[0] = index; //first byte is last written index
+            processReceiveBuffer();
+            reading = false;
             break;
           }
         } else {        
-          if (index < MAX_MESSAGE-1) {
+          if (reading && index < MAX_MESSAGE-1) {
             receiveBuffer[index++] = ch;
           } else {
-            reading = false; //too big - ignore packet
+            reading = false; //failed to find begin flag or too big - ignore packet/stop looking for end
             //TODO send failure - request to resend
           }
         }
       }
-      receiveBuffer[index] = 0;
-      processReceiveBuffer();
     }
   }
   
@@ -613,28 +578,36 @@ void swithRpiPower(Control* control) {
 }
 
 void sendSerialText(Control* control) { 
-  //Serial.print("HELLO FROM ARDUINO\n");
-  //Serial.flush();
-  swapXY(rpiPowerIcon->colors);
-  rpiPowerIcon->uptodate = false;
-  guiuptodate = false;
+  Serial.print("HELLO FROM ARDUINO\n");
+  Serial.flush();
 }
 
 void processReceiveBuffer() {
-  //first byte to expected the length of the packet/buffer - second byte to be expected signal/command type
+  //first byte is last written index of the packet/buffer - second byte to be expected signal/command type
   switch (receiveBuffer[1]) {
     case PPP_T_POWER_ON_COMPLETE:
       strcpy(statusLabel->text, "Steamer is ready\n");
       statusLabel->uptodate = false;
       
-      swapXY(rpiPowerIcon->colors);
       rpiPowerIcon->colors.x = ST7735_WHITE;
       rpiPowerIcon->uptodate = false;
       
       guiuptodate = false; //request GUI update
       break;
+    case PPP_T_AIRPLAY_STATUS:
+      memcpy(airplayIcon->colors.x, receiveBuffer[2], 2); //third & forth byte are new color for the airplay icon
+      airplayIcon->uptodate = false;
+      
+      guiuptodate = false; //request GUI update
+      break;
+    case PPP_T_NO_OPERATION:
+      break;
     default:
-      strcpy(statusLabel->text, "T_NOT_IMPL'D\n");
+      strcpy(statusLabel->text, "ERR: NOT IMPL'D\n");
+      byte b = receiveBuffer[1];
+      Serial.print("ERR: NOT IMPL'D\n");
+      Serial.print(b);
+      Serial.print("\n");
       statusLabel->uptodate = false;
       
       guiuptodate = false; //request GUI update

@@ -121,7 +121,7 @@ Analog 3 ---+
 * Hot glue (sorry, not sorry) to hold the VU-meter and Micro-SD Card Holder *strongly* in place
 * [Wire Cutters](https://www.aliexpress.com/item/32950629549.html)
 
-# Notes from the TFT supplier
+# Notes from the TFT Screen supplier
 
 In German
 
