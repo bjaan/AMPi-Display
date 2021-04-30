@@ -91,6 +91,8 @@ bool guiuptodate = false;
 bool buttonDown = false;
 int encoderPosition = 0;
 unsigned char receiveBuffer[MAX_MESSAGE];
+bool receiving = false;
+unsigned char receiveIndex = 0;
 Control* mainControl;
 Control* focusControl;
 Control* statusLabel;
@@ -526,28 +528,33 @@ void loop() {
   if (rpiPower) { //when we know that power is sent to the Pi
     if (Serial.available()) {  //read serial data only 
       unsigned char ch;
-      unsigned char index = 1;
-      bool reading = false;
       while (Serial.available() > 0) {
-        ch = Serial.read(); //FIXME not working anymore trying to fix other bugs
-        if (ch == PPP_BEGIN_FLAG) { //always start reading when this byte is received
-          reading = true;
-          index = 1;
-        } else if (ch == PPP_END_FLAG) { //only when reading and this byte is received process the message
-          if(reading) {
-            receiveBuffer[0] = index; //first byte is last written index
-            processReceiveBuffer();
-            reading = false;
+        ch = Serial.read();
+        switch (ch) {
+          case PPP_BEGIN_FLAG:
+            receiving = true;
+            receiveIndex = 0;
             break;
-          }
-        } else {        
-          if (reading && index < MAX_MESSAGE-1) {
-            receiveBuffer[index++] = ch;
-          } else {
-            reading = false; //failed to find begin flag or too big - ignore packet/stop looking for end
-            //TODO send failure - request to resend
-          }
+          case PPP_END_FLAG:
+            if(receiving) {
+              processReceiveBuffer();
+              receiving = false;
+            }
+            break;
+          default:
+            if (receiving && receiveIndex < MAX_MESSAGE-1) {
+              receiveBuffer[receiveIndex] = ch;
+              receiveIndex++;
+            } else {
+              receiveIndex = 0;
+              receiving = false; //failed to find begin flag or too big - ignore packet/stop looking for end
+            }
+            break;
         }
+      }
+    } else {
+      if (Serial.available()) {  //read serial data only when available
+        Serial.read(); //eat up - ignore all serial trafic when Pi is unpowered
       }
     }
   }
@@ -583,8 +590,8 @@ void sendSerialText(Control* control) {
 }
 
 void processReceiveBuffer() {
-  //first byte is last written index of the packet/buffer - second byte to be expected signal/command type
-  switch (receiveBuffer[1]) {
+  //first byte to be expected signal/command type
+  switch (receiveBuffer[0]) {
     case PPP_T_POWER_ON_COMPLETE:
       strcpy(statusLabel->text, "Steamer is ready\n");
       statusLabel->uptodate = false;
@@ -595,19 +602,14 @@ void processReceiveBuffer() {
       guiuptodate = false; //request GUI update
       break;
     case PPP_T_AIRPLAY_STATUS:
-      memcpy(airplayIcon->colors.x, receiveBuffer[2], 2); //third & forth byte are new color for the airplay icon
-      airplayIcon->uptodate = false;
-      
+      memcpy(&airplayIcon->colors.x, receiveBuffer[1], 2); //third & forth byte are new color for the airplay icon
+      airplayIcon->uptodate = false;     
       guiuptodate = false; //request GUI update
       break;
     case PPP_T_NO_OPERATION:
       break;
     default:
-      strcpy(statusLabel->text, "ERR: NOT IMPL'D\n");
-      byte b = receiveBuffer[1];
-      Serial.print("ERR: NOT IMPL'D\n");
-      Serial.print(b);
-      Serial.print("\n");
+      sprintf(statusLabel->text, "%d NOT IMPL'D\n", (byte)receiveBuffer[1]);
       statusLabel->uptodate = false;
       
       guiuptodate = false; //request GUI update
