@@ -71,11 +71,19 @@ struct Control {
 
 // SIMPLE POINT-TO-POINT PROTOCOL FOR SERIAL DEFINITIONS
 
-#define PPP_BEGIN_FLAG 0x7E
-#define PPP_END_FLAG 0x7F
+#define PPP_BEGIN_FLAG 0x3C
+#define PPP_END_FLAG 0x3E
+#define PPP_NDX_COMMAND 0
+#define PPP_NDX_LENGTH 1
 #define PPP_T_NO_OPERATION 0x00
-#define PPP_T_POWER_ON_COMPLETE 0x50 //P
-#define PPP_T_AIRPLAY_STATUS 0x52 //R
+#define PPP_T_POWER_ON_COMPLETE 0x50 //P    <P>
+#define PPP_T_AIRPLAY_ICON_COLOR 0x52 //R   <R\x03RGB>
+#define PPP_T_STATUS_TEXT 0x53 //S          <SsizeTEXT>
+unsigned char receiveBuffer[MAX_MESSAGE];
+bool receiving = false;
+unsigned char receiveIndex = 0;
+unsigned char receiveSizeLeft = 0;
+unsigned char character;
 
 // DISPLAY & ROTARY ENCODE DEFINITIONS
 
@@ -90,9 +98,6 @@ bool lastRpiPower = true;
 bool guiuptodate = false;
 bool buttonDown = false;
 int encoderPosition = 0;
-unsigned char receiveBuffer[MAX_MESSAGE];
-bool receiving = false;
-unsigned char receiveIndex = 0;
 Control* mainControl;
 Control* focusControl;
 Control* statusLabel;
@@ -129,7 +134,7 @@ void setup(void) {
 
   //initialize status bar
   statusLabel = new Control(TYPE_LABEL, mainControl);
-  strcpy(statusLabel->text, "status: active\0");
+  strcpy(statusLabel->text, "\0");
   statusLabel->position.x = 3;
   statusLabel->position.y = 125;
   statusLabel->size.x = 154; //160 - 6;
@@ -407,25 +412,12 @@ void moveMenu(Control* control, bool directionDown) {
     word i = 1;
     while (item) {
       c++;
-      if (item->selected) {
-        s = i;
-      }
+      if (item->selected) s = i;
       i++;
       item = item->next;
     }
-    if (directionDown == false) { //move according to direction
-      if (s > 1) {
-        s--;
-      } else {
-        s = c;
-      }
-    } else {
-      if (s < c) {
-        s++;
-      } else {
-        s = 1;
-      }
-    }
+    if (directionDown == false) if (s > 1) s--; else s = c; //move according to direction
+                           else if (s < c) s++; else s = 1;
     //switch
     item = control->child;
     i = 1;
@@ -454,21 +446,14 @@ void moveMenu(Control* control, bool directionDown) {
 void clickMenu(Control* control) {
     Control* item = control->child;
     while (item) {
-        if (item->selected) 
-          if (item->events)
-            if (item->events->onClick) 
-              item->events->onClick(item);
+        if (item->selected) if (item->events) if (item->events->onClick) item->events->onClick(item);
         item = item->next;
     }
 }
 
 void sendUp() {
-  if (!focusControl) //after start up do nothing
-    return;
-  if (focusControl->type == TYPE_LIST) {
-    moveMenu(focusControl, false);
-    return;
-  }
+  if (!focusControl) return; //after start up do nothing
+  if (focusControl->type == TYPE_LIST) { moveMenu(focusControl, false); }
 }
 
 void sendDown() {
@@ -477,25 +462,16 @@ void sendDown() {
     sendEnter(mainMenu);
     return;
   }
-  if (focusControl->type == TYPE_LIST) {
-    moveMenu(focusControl, true);
-    return;
-  }
+  if (focusControl->type == TYPE_LIST) { moveMenu(focusControl, true); }
 }
 
 void sendClick() {
-  if (!focusControl) //after start up do nothing
-    return;
-  if (focusControl->type == TYPE_LIST) {
-    clickMenu(focusControl);
-    return;
-  }
+  if (!focusControl) return; //after start up do nothing
+  if (focusControl->type == TYPE_LIST) clickMenu(focusControl);
 }
 
 void sendEnter(Control* control) {
-  if (control->events)
-    if (control->events->onEnter)
-      control->events->onEnter(control);
+  if (control->events) if (control->events->onEnter) control->events->onEnter(control);
 }
 
 // MAIN LOOP
@@ -504,80 +480,53 @@ void loop() {
   encoder.tick();
   int newPos = encoder.getPosition();
   if (encoderPosition != newPos) {
-    if (encoderPosition % 2 == 0) {
-      if (encoderPosition < newPos) {
-        sendUp();
-      } else {
-        sendDown();
-      }
-    }
+    if (encoderPosition % 2 == 0) if (encoderPosition < newPos) sendUp(); else sendDown();
     encoderPosition = newPos;
   }
  
   int btnState = digitalRead(ROTENC_SW); //read the button state
-
   if (btnState == LOW) { //if we detect LOW signal, button is pressed
-    if (!buttonDown) { //if 500ms have passed since last LOW pulse, it means that the button has been pressed, released and pressed again
-      sendClick();
-    }
+    if (!buttonDown) sendClick(); //if 500ms have passed since last LOW pulse, it means that the button has been pressed, released and pressed again
     buttonDown = true;
-  } else {
-    buttonDown = false; 
-  }
-
-  if (rpiPower) { //when we know that power is sent to the Pi
-    if (Serial.available()) {  //read serial data only 
-      unsigned char ch;
-      while (Serial.available() > 0) {
-        ch = Serial.read();
-        switch (ch) {
-          case PPP_BEGIN_FLAG:
-            receiving = true;
-            receiveIndex = 0;
-            break;
-          case PPP_END_FLAG:
-            if(receiving) {
-              processReceiveBuffer();
-              receiving = false;
-            }
-            break;
-          default:
-            if (receiving && receiveIndex < MAX_MESSAGE-1) {
-              receiveBuffer[receiveIndex] = ch;
-              receiveIndex++;
-            } else {
-              receiveIndex = 0;
-              receiving = false; //failed to find begin flag or too big - ignore packet/stop looking for end
-            }
-            break;
-        }
-      }
-    } else {
-      if (Serial.available()) {  //read serial data only when available
-        Serial.read(); //eat up - ignore all serial trafic when Pi is unpowered
-      }
-    }
-  }
+  } else buttonDown = false;
   
-  if (!guiuptodate) {
-    if (millis() - lastGUIRender > 50) { //wait at least 50ms between updates
-      renderGUI();
+  if (rpiPower) { //when we know that power is sent to the Pi
+    while (Serial.available() > 0) {
+      character = Serial.read();
+      if (!receiving) {
+        if (character == PPP_BEGIN_FLAG) {
+          receiving = true;
+          receiveIndex = 0;
+          receiveSizeLeft = 1; //the command is expected - so 1 byte
+        }
+      } else {
+        if (character == PPP_END_FLAG && receiveSizeLeft == 0) {
+          if (receiveIndex <= PPP_NDX_LENGTH) receiveBuffer[PPP_NDX_LENGTH] = 0; //no length received - 1 byte packet like <P>
+          processReceiveBuffer();
+          receiving = false;
+        } else {
+          if (receiveIndex < MAX_MESSAGE-1) {      
+            receiveBuffer[receiveIndex] = character;
+            if (receiveIndex == PPP_NDX_LENGTH) receiveSizeLeft = character;  
+                                           else if (receiveSizeLeft == 0) receiving = false; else receiveSizeLeft--;
+            receiveIndex++;
+          } else { 
+            receiving = false;
+          }
+        } 
+      }
     }
-  }
+  } else { while (Serial.available()) { Serial.read(); }} //read serial data only when available & eat up - ignore all serial trafic when Pi is unpowered
+  
+  if (!guiuptodate) if (millis() - lastGUIRender > 50) renderGUI(); //wait at least 50ms between updates
 }
 
 // GUI ACTIONS
 
 void swithRpiPower(Control* control) {
   rpiPower = !rpiPower;
-
-  if(rpiPower) {
-    strcpy(control->text, "Turn Streamer Off\0");
-    digitalWrite(RPI_POWER, HIGH);//off
-  } else {
-    strcpy(control->text, "Turn Streamer On\0");
-    digitalWrite(RPI_POWER, LOW);//on
-  }
+  if(rpiPower) { strcpy(control->text, "Turn Streamer Off\0"); digitalWrite(RPI_POWER, HIGH); }//off
+          else { strcpy(control->text, "Turn Streamer On\0");  digitalWrite(RPI_POWER, LOW); } //on 
   lastRpiPower = rpiPower;
   control->uptodate = false;
   control->parent->uptodate = false;
@@ -590,28 +539,29 @@ void sendSerialText(Control* control) {
 }
 
 void processReceiveBuffer() {
-  //first byte to be expected signal/command type
-  switch (receiveBuffer[0]) {
+  switch (receiveBuffer[PPP_NDX_COMMAND]) {  //first byte to be expected signal/command type - second (depending on the command) is the size in bytes of the payload
     case PPP_T_POWER_ON_COMPLETE:
-      strcpy(statusLabel->text, "Steamer is ready\n");
-      statusLabel->uptodate = false;
-      
-      rpiPowerIcon->colors.x = ST7735_WHITE;
-      rpiPowerIcon->uptodate = false;
-      
+      strcpy(statusLabel->text, "Streamer is ready\n"); statusLabel->uptodate = false;
+      rpiPowerIcon->colors.x = ST7735_WHITE; rpiPowerIcon->uptodate = false;
       guiuptodate = false; //request GUI update
       break;
-    case PPP_T_AIRPLAY_STATUS:
-      memcpy(&airplayIcon->colors.x, receiveBuffer[1], 2); //third & forth byte are new color for the airplay icon
-      airplayIcon->uptodate = false;     
+      
+    case PPP_T_AIRPLAY_ICON_COLOR:
+      airplayIcon->colors.x = tft.color565(receiveBuffer[2], receiveBuffer[3], receiveBuffer[4]); airplayIcon->uptodate = false; //third, forth & fifth byte are new color for the airplay icon
       guiuptodate = false; //request GUI update
       break;
+      
+    case PPP_T_STATUS_TEXT:
+      byte size_ = receiveBuffer[PPP_NDX_LENGTH]; receiveBuffer[PPP_NDX_LENGTH+size_+1] = 0; //terminate with zero byte
+      strcpy(statusLabel->text, &receiveBuffer[2]); statusLabel->uptodate = false;
+      guiuptodate = false; //request GUI update
+      break;
+      
     case PPP_T_NO_OPERATION:
       break;
-    default:
-      sprintf(statusLabel->text, "%d NOT IMPL'D\n", (byte)receiveBuffer[1]);
-      statusLabel->uptodate = false;
       
+    default:
+      sprintf(statusLabel->text, "%d NOT IMPL'D\n", (byte)receiveBuffer[PPP_NDX_COMMAND]); statusLabel->uptodate = false;
       guiuptodate = false; //request GUI update
       break;
   }  
