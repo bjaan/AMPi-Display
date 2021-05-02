@@ -17,7 +17,7 @@ First prototype (WIP) with Raspberry Pi Model 3 and an Arduino Nano
 * Clear audio using build-in pre-amp and audio transformers, to allow full galvanic separation between the external audio equipment and AMPi
 * Computer-controlled interface that controls screen, the power of and the service running on the built-in audio streaming device
 * Built-in power supply
-* AirPlay playback using [**Shairport Sync**](https://github.com/mikebrady/shairport-sync).  AMPi identifies itself as a AirPlay network player where you can connect your iPhone or Mac to play music.  You can also use iTunes on Windows 10 to play music or route your audio to AMPi using [**TuneBlade**](http://www.tuneblade.com/)
+* AirPlay playback using [**Shairport Sync**](https://github.com/mikebrady/shairport-sync). AMPi identifies itself as a AirPlay network player, where your iPhone or iTunes on a Mac can be connected to, to play music.  You can also use iTunes on Windows 10 to play music through AirPlay or route your audio to AMPi using [**TuneBlade**](http://www.tuneblade.com/)
 * Bluetooth 4.2 Playback, this overrides everything and directly accessible after power-up
 * Pandora.com music player (WIP), using [Pianobar](https://github.com/PromyLOPh/pianobar)
 
