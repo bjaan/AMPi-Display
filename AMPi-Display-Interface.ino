@@ -82,6 +82,8 @@ struct Control {
 #define PPP_T_POWER_OFF_CONFIRMED 0x70 //p    <p>
 #define FIFTEEN_SECONDS 15000
 #define PPP_T_AIRPLAY_ICON_COLOR 0x52 //R   <R\x03RGB>
+#define PPP_T_PANDORA_MUSIC_ICON_COLOR 0x4E //N   <N\x03RGB>
+#define PPP_T_APPLE_MUSIC_ICON_COLOR 0x4C //L   <L\x03RGB>
 #define PPP_T_STATUS_TEXT 0x53 //S          <SsizeTEXT>
 
 unsigned char receiveBuffer[MAX_MESSAGE];
@@ -338,6 +340,10 @@ void swapXY(XY &xy) {
   word t = xy.x; xy.x = xy.y; xy.y = t;
 }
 
+int readRGB88AndConvertRGB656(unsigned char * buffer, word index) {
+  return tft.color565(buffer[index], buffer[index+1], buffer[index+2]);
+}
+
 void enterMenu(Control* control) {
   if (focusControl) {
     focusControl->selected = false;
@@ -473,6 +479,11 @@ void rpiPowerOff() {
   rpiPoweringDown = false;
 }
 
+void setAllServicesRed() {
+  airplayIcon->colors.x = COLOR_RED; airplayIcon->uptodate = false;
+  pandoraIcon->colors.x = COLOR_RED; pandoraIcon->uptodate = false;
+  appleMusicIcon->colors.x = COLOR_RED; appleMusicIcon->uptodate = false;
+}
 void sendSerialText(Control* control) { 
   Serial.print("HELLO FROM ARDUINO\n");
   Serial.flush();
@@ -517,12 +528,22 @@ void processReceiveBuffer() {
       rpiPoweringDown = true;
       delayEnd = millis() + FIFTEEN_SECONDS;
       setStatus("Wait 15 seconds...\0");
-      airplayIcon->colors.x = COLOR_RED; airplayIcon->uptodate = false;
+      setAllServicesRed();
+      guiuptodate = false; //request GUI update
+      break;
+
+    case PPP_T_AIRPLAY_ICON_COLOR:
+      airplayIcon->colors.x = readRGB88AndConvertRGB656(receiveBuffer,2); airplayIcon->uptodate = false; //third, forth & fifth byte are new color for the airplay icon
       guiuptodate = false; //request GUI update
       break;
       
-    case PPP_T_AIRPLAY_ICON_COLOR:
-      airplayIcon->colors.x = tft.color565(receiveBuffer[2], receiveBuffer[3], receiveBuffer[4]); airplayIcon->uptodate = false; //third, forth & fifth byte are new color for the airplay icon
+    case PPP_T_PANDORA_MUSIC_ICON_COLOR:
+      pandoraIcon->colors.x = readRGB88AndConvertRGB656(receiveBuffer,2); pandoraIcon->uptodate = false; //third, forth & fifth byte are new color for the airplay icon
+      guiuptodate = false; //request GUI update
+      break;
+
+    case PPP_T_APPLE_MUSIC_ICON_COLOR:
+      appleMusicIcon->colors.x = readRGB88AndConvertRGB656(receiveBuffer,2); appleMusicIcon->uptodate = false; //third, forth & fifth byte are new color for the airplay icon
       guiuptodate = false; //request GUI update
       break;
       
