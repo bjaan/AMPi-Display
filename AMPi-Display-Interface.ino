@@ -1,6 +1,8 @@
-//ICONS - tool to create at http://javl.github.io/image2cpp/ - use 16x16 monochrome images & use invert colors
+//ICONS - tool to create at http://javl.github.io/image2cpp/ - use 16x16 monochrome images & set white background & set use invert image colors & set plain bytes & set Horizontal 1 byte per pixel draw mode
 const unsigned char IMG_POWER [] PROGMEM = { 0x01, 0x80, 0x01, 0x80, 0x01, 0x80, 0x0d, 0xb0, 0x1d, 0xb8, 0x39, 0x9c, 0x31, 0x8e, 0x60, 0x06, 0x60, 0x06, 0x60, 0x06, 0x60, 0x06, 0x30, 0x0c, 0x38, 0x1c, 0x1c, 0x38, 0x0f, 0xf0, 0x03, 0xc0 };
 const unsigned char IMG_AIRPLAY [] PROGMEM = { 0x07, 0xe0, 0x08, 0x10, 0x30, 0x0c, 0x43, 0xc2, 0x44, 0x22, 0x49, 0x92, 0x92, 0x49, 0x94, 0x29, 0x94, 0x29, 0x94, 0x29, 0x90, 0x09, 0x49, 0x92, 0x43, 0xc2, 0x27, 0xe4, 0x0f, 0xf0, 0x0f, 0xf0 };
+const unsigned char IMG_PANDORA_MUSIC [] PROGMEM = { 0x7f, 0xf0, 0x40, 0x08, 0x40, 0x04, 0x40, 0x02, 0x40, 0x02, 0x40, 0x02, 0x40, 0x02, 0x40, 0x02, 0x40, 0x02, 0x40, 0x04, 0x40, 0x08, 0x47, 0xf0, 0x44, 0x00, 0x44, 0x00, 0x44, 0x00, 0x7c, 0x00 };
+const unsigned char IMG_APPLE_MUSIC [] PROGMEM = { 0x3f, 0xfc, 0x7f, 0xfe, 0xff, 0xc7, 0xfc, 0x07, 0xf8, 0x07, 0xf8, 0x27, 0xf9, 0xe7, 0xf9, 0xe7, 0xf9, 0xe7, 0xf9, 0xc7, 0xf1, 0x87, 0xe1, 0x87, 0xe1, 0xcf, 0xf3, 0xff, 0x7f, 0xfe, 0x3f, 0xfc };
 
 #include <Adafruit_ST7735.h> //see https://github.com/adafruit/Adafruit-ST7735-Library
 #include <Fonts/FreeSans9pt7b.h> //font available in the above libary
@@ -77,8 +79,11 @@ struct Control {
 #define PPP_NDX_LENGTH 1
 #define PPP_T_NO_OPERATION 0x00
 #define PPP_T_POWER_ON_COMPLETE 0x50 //P    <P>
+#define PPP_T_POWER_OFF_CONFIRMED 0x70 //p    <p>
+#define FIFTEEN_SECONDS 15000
 #define PPP_T_AIRPLAY_ICON_COLOR 0x52 //R   <R\x03RGB>
 #define PPP_T_STATUS_TEXT 0x53 //S          <SsizeTEXT>
+
 unsigned char receiveBuffer[MAX_MESSAGE];
 bool receiving = false;
 unsigned char receiveIndex = 0;
@@ -95,6 +100,8 @@ RotaryEncoder encoder(ROTENC_CLK, ROTENC_DT, RotaryEncoder::LatchMode::TWO03);
 unsigned long lastGUIRender;
 bool rpiPower = false;
 bool lastRpiPower = true;
+bool rpiPoweringDown = false;
+unsigned long delayEnd;
 bool guiuptodate = false;
 bool buttonDown = false;
 int encoderPosition = 0;
@@ -104,7 +111,10 @@ Control* statusBar;
 Control* statusLabel;
 Control* rpiPowerIcon;
 Control* airplayIcon;
+Control* pandoraIcon;
+Control* appleMusicIcon;
 Control* mainMenu;
+Control* rpiPowerItem;
 
 // INITIALIZATION
 
@@ -160,7 +170,7 @@ void setup(void) {
   mainMenu->colors.x = ST7735_WHITE; mainMenu->colors.y = ST7735_BLACK;
   mainMenu->events = new Events(); mainMenu->events->onEnter = enterMenu;
 
-  Control* rpiPowerItem = new Control(TYPE_ITEM, mainMenu);
+  rpiPowerItem = new Control(TYPE_ITEM, mainMenu);
   rpiPowerItem->size.x = mainMenu->size.x; rpiPowerItem->size.y = 19;
   strcpy(rpiPowerItem->text, "Turn Streamer On\0");
   rpiPowerItem->position.x = 1; rpiPowerItem->position.y = 11;
@@ -189,6 +199,16 @@ void setup(void) {
   airplayIcon->size.x = 16; airplayIcon->size.y = 16;
   airplayIcon->position.x = 68 /*3+45 (AMPi label width) +2+16 (icon width) +2 */; airplayIcon->position.y = 8;
   airplayIcon->colors.x = COLOR_RED; airplayIcon->icon = IMG_AIRPLAY;
+
+  pandoraIcon = new Control(TYPE_ICON, mainControl);
+  pandoraIcon->size.x = 16; pandoraIcon->size.y = 16;
+  pandoraIcon->position.x = 86 /*3+45 (AMPi label width) +2+16 (icon width*2) +2*2 */; pandoraIcon->position.y = 8;
+  pandoraIcon->colors.x = COLOR_RED; pandoraIcon->icon = IMG_PANDORA_MUSIC;
+
+  appleMusicIcon = new Control(TYPE_ICON, mainControl);
+  appleMusicIcon->size.x = 16; appleMusicIcon->size.y = 16;
+  appleMusicIcon->position.x = 104 /*3+45 (AMPi label width) +2+16 (icon width*3) +2*3 */; appleMusicIcon->position.y = 8;
+  appleMusicIcon->colors.x = COLOR_RED; appleMusicIcon->icon = IMG_APPLE_MUSIC;
   
   //build main menu
   mainMenu->child = rpiPowerItem; rpiPowerItem->next = pandoraItem;
@@ -202,7 +222,9 @@ void setup(void) {
   ampiLabelMain->next = mainMenu;
   mainMenu->next = rpiPowerIcon;
   rpiPowerIcon->next = airplayIcon;
-  //airplayIcon->next = null;
+  airplayIcon->next = pandoraIcon;
+  pandoraIcon->next = appleMusicIcon;
+  //appleMusicIcon->next = null;
 
   Serial.begin(9600); // open the serial port at 9600 bps:
 
@@ -410,41 +432,68 @@ void setStatus(char* text) {
 
 void loop() {
   encoder.tick();
-  int newPos = encoder.getPosition();
-  if (encoderPosition != newPos) {
-    if (encoderPosition % 2 == 0) if (encoderPosition < newPos) sendUp(); else sendDown();
-    encoderPosition = newPos;
-  }
- 
-  int btnState = digitalRead(ROTENC_SW); //read the button state
-  if (btnState == LOW) { //if we detect LOW signal, button is pressed
-    if (!buttonDown) sendClick(); //if 500ms have passed since last LOW pulse, it means that the button has been pressed, released and pressed again
-    buttonDown = true;
-  } else buttonDown = false;
 
-  while (Serial.available() > 0) {
+  if (!rpiPoweringDown) { //normal operation as Raspberry Pi is not powering down
+    int newPos = encoder.getPosition();
+    if (encoderPosition != newPos) {
+      if (encoderPosition % 2 == 0) if (encoderPosition < newPos) sendUp(); else sendDown();
+      encoderPosition = newPos;
+    }
+    
+    int btnState = digitalRead(ROTENC_SW); //read the button state
+    if (btnState == LOW) { //if we detect LOW signal, button is pressed
+      if (!buttonDown) sendClick();
+      buttonDown = true;
+    } else buttonDown = false;
+  
+    if (readSerialData()) processReceiveBuffer(); //process serial data
+  } else if (millis() > delayEnd) rpiPowerOff(); //as the Raspberry Pi powering down we need to wait it out (fixed timer of 15 seconds, not fancy) and at the end of timer change icon colors and change rpiPower booleans
+     
+  if (!guiuptodate) if (millis() - lastGUIRender > 50) renderGUI(); //wait at least 50ms between updates
+}
+
+// GUI ACTIONS
+
+void swithRpiPower(Control* control) {
+  rpiPower = !rpiPower;
+  if(rpiPower) { strcpy(control->text, "Turn Streamer Off\0"); digitalWrite(RPI_POWER, HIGH) /*turn relay OFF*/; } //currently off
+          else { strcpy(control->text, "Turning Off.\0");  Serial.print("<p>") /*Send Power Off command to Raspberry Pi*/ ;} //currently on        
+  lastRpiPower = rpiPower;
+  control->uptodate = false;
+  control->parent->uptodate = false;
+  guiuptodate = false;
+}
+
+void rpiPowerOff() {
+  rpiPowerIcon->colors.x = COLOR_RED; rpiPowerIcon->uptodate = false;
+  strcpy(rpiPowerItem->text, "Turn Streamer On\0"); rpiPowerItem->uptodate = false; rpiPowerItem->parent->uptodate = false;
+  setStatus("\0");
+  guiuptodate = false;
+  digitalWrite(RPI_POWER, LOW) /*turn relay OFF*/;
+  rpiPoweringDown = false;
+}
+
+void sendSerialText(Control* control) { 
+  Serial.print("HELLO FROM ARDUINO\n");
+  Serial.flush();
+}
+
+bool readSerialData() {
+ while (Serial.available() > 0) {
     character = Serial.read();
-    Serial.print(character);
-    Serial.print("\n");
     if (!receiving) {
       if (character == PPP_BEGIN_FLAG) {
-        Serial.print("BEGIN\n");
         receiving = true;
         receiveIndex = 0;
         receiveSizeLeft = 1; //the command is expected - so 1 byte
       }
     } else {
-      Serial.print("RSL=");
-      Serial.print(receiveSizeLeft);
-      Serial.print("\n");
       if (character == PPP_END_FLAG && receiveSizeLeft == 0) {
-        Serial.print("END\n");
         if (receiveIndex <= PPP_NDX_LENGTH) receiveBuffer[PPP_NDX_LENGTH] = 0; //no length received - 1 byte packet like <P>
-        processReceiveBuffer();
         receiving = false;
+        return true;
       } else {
         if (receiveIndex < MAX_MESSAGE-1) {
-          Serial.print("RECEIVE\n");
           receiveBuffer[receiveIndex] = character;
           if (receiveIndex == PPP_NDX_LENGTH) receiveSizeLeft = character;  
                                          else if (receiveSizeLeft == 0) receiving = false; else receiveSizeLeft--;
@@ -453,25 +502,7 @@ void loop() {
       } 
     }
   }
-
-  if (!guiuptodate) if (millis() - lastGUIRender > 50) renderGUI(); //wait at least 50ms between updates
-}
-
-// GUI ACTIONS
-
-void swithRpiPower(Control* control) {
-  rpiPower = !rpiPower;
-  if(rpiPower) { strcpy(control->text, "Turn Streamer Off\0"); digitalWrite(RPI_POWER, HIGH); }//off
-          else { strcpy(control->text, "Turn Streamer On\0");  digitalWrite(RPI_POWER, LOW); } //on 
-  lastRpiPower = rpiPower;
-  control->uptodate = false;
-  control->parent->uptodate = false;
-  guiuptodate = false;
-}
-
-void sendSerialText(Control* control) { 
-  Serial.print("HELLO FROM ARDUINO\n");
-  Serial.flush();
+  return false;
 }
 
 void processReceiveBuffer() {
@@ -479,6 +510,14 @@ void processReceiveBuffer() {
     case PPP_T_POWER_ON_COMPLETE:
       setStatus("Streamer is ready\0");
       rpiPowerIcon->colors.x = ST7735_WHITE; rpiPowerIcon->uptodate = false;
+      guiuptodate = false; //request GUI update
+      break;
+
+    case PPP_T_POWER_OFF_CONFIRMED: /*Power Off command received by Raspberry Pi and this is confirmation, it is shutting down */ 
+      rpiPoweringDown = true;
+      delayEnd = millis() + FIFTEEN_SECONDS;
+      setStatus("Wait 15 seconds...\0");
+      airplayIcon->colors.x = COLOR_RED; airplayIcon->uptodate = false;
       guiuptodate = false; //request GUI update
       break;
       
@@ -494,6 +533,7 @@ void processReceiveBuffer() {
       break;
       
     case PPP_T_NO_OPERATION:
+     
       break;
       
     default:
