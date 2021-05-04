@@ -2,17 +2,17 @@
 
 AMPi is a project that integrates a mains electricity power supply with an audio amplifier, an 4-channel audio relay switcher, input audio transformers, a Raspberry PI with DAC, a ST7735 based TFT display, and an Arduino Nano (to control the Raspberry Pi over serial and the built-in screen) to make a completely integrated digital audio solution that supports the latest high quality internet audio streaming and smart speaker AirPlay & Bluetooth 4.2 functionality over either wired Ethernet or Wi-Fi in one box.
 
-This repository is the code for the Arduino Nano. For the code running on Raspberry Pi, go to [AMPi-Service](https://github.com/bjaan/AMPi-Service/)
+This repository is the code for the Arduino Nano. For the code running on the Raspberry Pi, go to [AMPi-Service](https://github.com/bjaan/AMPi-Service/)
 
 First prototype (WIP) with Raspberry Pi Model 3 and an Arduino Nano
 
-![Front Side (first prototype)](https://raw.githubusercontent.com/bjaan/AMPi-Display/main/firstprototype-action.gif)
+![Front Side (first prototype)](https://raw.githubusercontent.com/bjaan/AMPi-Display/main/firstprototype-top.jpg)
 ![Back Side (first prototype)](https://raw.githubusercontent.com/bjaan/AMPi-Display/main/firstprototype-back.jpg)
 
 # AMPi features
 
-* 2 x 100W Class D Audio Amplifier
-* Built-in internet audio streaming device with high-quality Digital-To-Analog Converter (DAC), e.g. FLAC 24-bits 192khz
+* 2 channels x 100W (Stereo) Class D Audio Amplifier
+* Built-in internet audio streaming device with high-quality Digital-to-Analog Converter (DAC), e.g. FLAC 24-bits 192khz
 * Built-in pre-amplifier and audio transformers, to allow full galvanic separation between external audio equipment and the DAC and AMPi
 * Computer-controlled interface that controls the screen, manages the power of and the services running on the built-in audio streaming device
 * 3 switchable analog audio input channels using a relay array through a rotary switch
