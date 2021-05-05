@@ -103,6 +103,7 @@ unsigned long lastGUIRender;
 bool rpiPower = false;
 bool lastRpiPower = true;
 bool rpiPoweringDown = false;
+bool rpiPoweringUp = false;
 unsigned long delayEnd;
 bool guiuptodate = false;
 bool buttonDown = false;
@@ -111,12 +112,12 @@ Control* mainControl;
 Control* focusControl;
 Control* statusBar;
 Control* statusLabel;
-Control* rpiPowerIcon;
-Control* airplayIcon;
-Control* pandoraIcon;
-Control* appleMusicIcon;
+Control* rpiPowerIcon; Control* airplayIcon; Control* pandoraIcon; Control* appleMusicIcon;
 Control* mainMenu;
 Control* rpiPowerItem;
+Control* popupControl;
+Control* popupLabel1; Control* popupLabel2;
+Control* popupConfirmMenu;
 
 // INITIALIZATION
 
@@ -159,7 +160,7 @@ void setup(void) {
   statusLabel = new Control(TYPE_LABEL, mainControl);
   strcpy(statusLabel->text, "\0");
   statusLabel->position.x = 3; statusLabel->position.y = 125;
-  statusLabel->colors.x = ST7735_WHITE; statusLabel->colors.y = COLOR_BLUE;
+  statusLabel->colors.x = ST7735_WHITE;
   
   Control* ampiLabelMain = new Control(TYPE_LABEL, mainControl); //size x=y=0 to hide background
   ampiLabelMain->position.x = 3; ampiLabelMain->position.y = 22;
@@ -184,7 +185,7 @@ void setup(void) {
   strcpy(pandoraItem->text, "Pandora Music\0");
   pandoraItem->position.x = 1; pandoraItem->position.y = 11; 
   pandoraItem->colors.x = ST7735_BLACK; pandoraItem->colors.y = COLOR_RED;
-  pandoraItem->events = new Events(); pandoraItem->events->onClick = sendSerialText;
+  pandoraItem->events = new Events(); pandoraItem->events->onClick = switchPandora;
 
   Control* appleItem = new Control(TYPE_ITEM, mainMenu);
   appleItem->size.x = mainMenu->size.x; appleItem->size.y = 19;
@@ -213,8 +214,33 @@ void setup(void) {
   appleMusicIcon->colors.x = COLOR_RED; appleMusicIcon->icon = IMG_APPLE_MUSIC;
   
   //build main menu
-  mainMenu->child = rpiPowerItem; rpiPowerItem->next = pandoraItem;
-  pandoraItem->next = appleItem; 
+  mainMenu->child = rpiPowerItem; rpiPowerItem->next = pandoraItem; pandoraItem->next = appleItem; 
+
+  //build popup GUI
+  popupControl = new Control(TYPE_RECTANGLE, mainControl);
+  popupControl->position.x = 10; popupControl->position.y = 10;
+  popupControl->size.x = 135; popupControl->size.y = 100;
+  popupControl->colors.x = COLOR_BLUE; popupControl->colors.y = ST7735_BLACK;
+  popupControl->visible = false;
+
+  popupLabel1 = new Control(TYPE_LABEL, popupControl); //size x=y=0 to hide background
+  popupLabel1->position.x = 2; popupLabel1->position.y = 14;
+  popupLabel1->colors.x = ST7735_WHITE; 
+
+  popupLabel2 = new Control(TYPE_LABEL, popupControl); //size x=y=0 to hide background
+  popupLabel2->position.x = 2; popupLabel2->position.y = 28;
+  popupLabel2->colors.x = ST7735_WHITE; 
+
+  popupConfirmMenu = new Control(TYPE_LIST, popupControl);
+  popupConfirmMenu->position.x = 2; popupConfirmMenu->position.y = 35;
+  popupConfirmMenu->size.x = 100 ; popupConfirmMenu->size.y = 60;
+  popupConfirmMenu->colors.x = ST7735_WHITE; popupConfirmMenu->colors.y = ST7735_BLACK;
+  popupConfirmMenu->events = new Events(); //powerConfirmMenu->events->onEnter = enterMenu;
+
+  popupControl->child = popupLabel1;
+  popupLabel1->next = popupLabel2;
+ // popupLabel2->next = popupConfirmMenu;
+  //powerConfirmMenu->next = powerConfirmMenu;
   
   //build main GUI
   mainControl->child = statusBar;
@@ -226,7 +252,8 @@ void setup(void) {
   rpiPowerIcon->next = airplayIcon;
   airplayIcon->next = pandoraIcon;
   pandoraIcon->next = appleMusicIcon;
-  //appleMusicIcon->next = null;
+  appleMusicIcon->next = popupControl;
+  //popupControl->next = null;
 
   Serial.begin(9600); // open the serial port at 9600 bps:
 
@@ -285,6 +312,8 @@ word renderItem(Control* item, int y_delta)
 }
 
 void render(Control* c) {
+  Control* d; //used for child controls
+  word i; //used for loops
   if (c->visible) {
     switch (c->type) {
       case TYPE_MAIN: tft.fillScreen(c->colors.y); break;
@@ -298,10 +327,21 @@ void render(Control* c) {
           word col_r = (c->colors.x >> 11 & 31);
           word col_g = (c->colors.x >> 5 & 63);
           word col_b = (c->colors.x >> 0 & 31);
-          for (word i = 0; i < c->size.y; i++) {
+          for (i = 0; i < c->size.y; i++) {
             tft.drawFastHLine( c->position.x, c->position.y + i, c->size.x, (col_r << 11 | col_g << 5 | col_b << 0));
             col_r += delta_r; col_g += delta_g; col_b += delta_b;
           }
+        }       
+        d = c->child; //there are children to render - rectangle can have that - it acts as a panel
+        while (d) {
+          if (!c->uptodate || !d->uptodate) { //render only when main control (the panel) or the sub-control is not marked as up-to-date
+            word x = d->position.x; word y = d->position.y; //store original position
+            d->position.x = c->position.x + x;  d->position.y = c->position.y + y; //change relative position
+            render(d);
+            d->position.x = x; d->position.y = y;//unchange position
+            d->uptodate = true;
+          }
+          d = d->next;
         }
         break;
       case TYPE_ICON:
@@ -309,16 +349,16 @@ void render(Control* c) {
         break;
       case TYPE_LIST:
         //background not shown tft.fillRect(c->position.x, c->position.y, c->size.x, c->size.y, ST7735_RED);
-        Control* i = c->child;
+        d = c->child;
         word y_delta = 0;
-        while (i) {
-          if (i->visible) y_delta += renderItem(i, y_delta); else y_delta += i->size.y;
-          i = i->next;
+        while (d) {
+          if (d->visible) y_delta += renderItem(d, y_delta); else y_delta += d->size.y;
+          d = d->next;
         }
         tft.drawRect(c->position.x, c->position.y, c->size.x, y_delta, c->colors.y);
         break;
     }
-  } else tft.fillRect(c->position.x, c->position.y, c->size.x, c->size.y, mainControl->colors.y);
+  } else if (c->type != TYPE_RECTANGLE) tft.fillRect(c->position.x, c->position.y, c->size.x, c->size.y, mainControl->colors.y);
   c->uptodate = true;
 }
 
@@ -445,7 +485,6 @@ void loop() {
       if (encoderPosition % 2 == 0) if (encoderPosition < newPos) sendUp(); else sendDown();
       encoderPosition = newPos;
     }
-    
     int btnState = digitalRead(ROTENC_SW); //read the button state
     if (btnState == LOW) { //if we detect LOW signal, button is pressed
       if (!buttonDown) sendClick();
@@ -461,8 +500,13 @@ void loop() {
 // GUI ACTIONS
 
 void swithRpiPower(Control* control) {
+  if (rpiPoweringUp) {
+    setStatus("What? Wait!");
+    control->uptodate = false;
+    return;
+  }
   rpiPower = !rpiPower;
-  if(rpiPower) { strcpy(control->text, "Turn Streamer Off\0"); digitalWrite(RPI_POWER, HIGH) /*turn relay OFF*/; } //currently off
+  if(rpiPower) { strcpy(control->text, "Turn Streamer Off\0"); digitalWrite(RPI_POWER, HIGH) /*turn relay ON*/; rpiPoweringUp = true; } //currently off
           else { strcpy(control->text, "Turning Off.\0");  Serial.print("<p>") /*Send Power Off command to Raspberry Pi*/ ;} //currently on        
   lastRpiPower = rpiPower;
   control->uptodate = false;
@@ -484,9 +528,28 @@ void setAllServicesRed() {
   pandoraIcon->colors.x = COLOR_RED; pandoraIcon->uptodate = false;
   appleMusicIcon->colors.x = COLOR_RED; appleMusicIcon->uptodate = false;
 }
-void sendSerialText(Control* control) { 
-  Serial.print("HELLO FROM ARDUINO\n");
-  Serial.flush();
+void switchPandora(Control* control) { 
+  if (rpiPower && !rpiPoweringUp) {
+    Serial.print("<N>");
+    Serial.flush();
+  } else {
+    //setStatus("Turn Streamer On first"); 
+    strcpy(popupLabel1->text, "Turn On now?\0"); popupLabel1->uptodate = false;
+    strcpy(popupLabel2->text, "Please confirm\0"); popupLabel2->uptodate = false;
+    popupControl->visible = true;
+    popupControl->uptodate = false;
+    setStatus("Turn Streamer On!");
+    guiuptodate = false;
+  }
+}
+void switchAppleMusic(Control* control) { 
+  if (rpiPower && !rpiPoweringUp) {
+    Serial.print("<L>");
+    Serial.flush();
+  } else {
+    setStatus("Turn Streamer On!");
+    guiuptodate = false;
+  }
 }
 
 bool readSerialData() {
@@ -522,6 +585,7 @@ void processReceiveBuffer() {
       setStatus("Streamer is ready\0");
       rpiPowerIcon->colors.x = ST7735_WHITE; rpiPowerIcon->uptodate = false;
       guiuptodate = false; //request GUI update
+      rpiPoweringUp = false;
       break;
 
     case PPP_T_POWER_OFF_CONFIRMED: /*Power Off command received by Raspberry Pi and this is confirmation, it is shutting down */ 
