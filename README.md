@@ -30,9 +30,9 @@ First prototype (WIP) with Raspberry Pi Model 3 and an Arduino Nano
 * Front & Back Panel Label - with level indicators and indications what the knobs do
 * HDMI break-out cable to add in the back, needed for possibly external display or video streaming (currently shipping)
 * Raspberry Pi Software - further integration with the display interface component
-
 * Interface to enter Wi-Fi / LAN settings
 * Streaming software for Apple Music
+* ...and more
 
 # Arduino Nano pin connections
 
