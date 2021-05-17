@@ -6,18 +6,19 @@ const unsigned char IMG_PANDORA_MUSIC [] PROGMEM = { 0x7f, 0xf0, 0x40, 0x08, 0x4
 const unsigned char IMG_APPLE_MUSIC [] PROGMEM = { 0x3f, 0xfc, 0x7f, 0xfe, 0xff, 0xc7, 0xfc, 0x07, 0xf8, 0x07, 0xf8, 0x27, 0xf9, 0xe7, 0xf9, 0xe7, 0xf9, 0xe7, 0xf9, 0xc7, 0xf1, 0x87, 0xe1, 0x87, 0xe1, 0xcf, 0xf3, 0xff, 0x7f, 0xfe, 0x3f, 0xfc };
 
 //TEXT
-const char TXT_TURN_STREAMER_ON [] PROGMEM = "Turn Streamer on\0";
-const char TXT_TURN_STREAMER_ON2 [] PROGMEM = "Turn Streamer on!\0";
-const char TXT_TURN_STREAMER_OFF [] PROGMEM = "Turn Streamer off\0";
-const char TXT_NUL [] PROGMEM = "\0";
-const char TXT_AMPI [] PROGMEM = "AMPi\0";
-const char TXT_PANDORA_MUSIC [] PROGMEM = "Pandora Music\0";
-const char TXT_APPLE_MUSIC [] PROGMEM = "Apple Music\0";
-const char TXT_TURNING_ON [] PROGMEM = "Turning on.\0";
-const char TXT_TURNING_OFF [] PROGMEM = "Turning off.\0";
-const char TXT_WAIT_FIFTEEN_SECONDS [] PROGMEM = "Wait 15 seconds...\0";
-const char TXT_TURN_ON_NOW [] PROGMEM = "Turn on now?\0";
-const char TXT_STREAMER_IS_READY [] PROGMEM = "Streamer is ready\0";
+const char TXT_TURN_STREAMER_ON [] PROGMEM = "Turn Streamer on";
+const char TXT_TURN_STREAMER_ON2 [] PROGMEM = "Turn Streamer on!";
+const char TXT_TURN_STREAMER_OFF [] PROGMEM = "Turn Streamer off";
+const char TXT_AMPI [] PROGMEM = "AMPi";
+const char TXT_YES [] PROGMEM = "Yes!";
+const char TXT_NO_DONT [] PROGMEM = "No, don't.";
+const char TXT_PANDORA_MUSIC [] PROGMEM = "Pandora Music";
+const char TXT_APPLE_MUSIC [] PROGMEM = "Apple Music";
+const char TXT_TURNING_ON [] PROGMEM = "Turning on.";
+const char TXT_TURNING_OFF [] PROGMEM = "Turning off.";
+const char TXT_WAIT_FIFTEEN_SECONDS [] PROGMEM = "Wait 15 seconds...";
+const char TXT_TURN_ON_NOW [] PROGMEM = "Turn on now?";
+const char TXT_STREAMER_IS_READY [] PROGMEM = "Streamer is ready";
 
 #include <Adafruit_ST7735.h> //see https://github.com/adafruit/Adafruit-ST7735-Library
 #include <Fonts/FreeSans9pt7b.h> //font available in the above library
@@ -58,18 +59,21 @@ struct Control {
   uint8_t width = 0; uint8_t height = 0;
   uint16_t color1 = 0; uint16_t color2 = 0;
   Events* events  = NULL;
-  const unsigned char* icon  = NULL;
+  const unsigned char* icon = NULL;
   Control* next = NULL; Control* parent = NULL; Control* child = NULL;
 
-  Control(byte type, Control* parent) {
+  Control(byte type, Control* parent, char* text_P = NULL, bool maxText = false) {
     this->type = type;
     this->parent = parent;
-    if (type == TYPE_LABEL || type == TYPE_ITEM) {
-      text = (char*)malloc(MAX_TEXT);
-      text[0] = 0;
-    }
     if (type != TYPE_RECTANGLE) { color1 = ST7735_WHITE; color2 = ST7735_BLACK; } else { color1 = ST7735_BLACK; color2 = ST7735_BLACK; }
+    if (maxText) text = (char*)malloc(MAX_TEXT); else if (text_P) text = (char*)malloc(1+strlen_P(text_P)); //set dynamic text will use MAX_TEXT size instead of needed bytes for fixed label
+    if (text_P) strcpy_P(text, text_P); else if (text) text[0] = 0; //optionally with initial text_P text from PROGMEM
   };
+  void setText(char* text_P) {
+    if (!text) text = (char*)malloc(MAX_TEXT); //just when we did not initialize by mistake - unnecessary when code is well written, i.e. not setting text when not initialized
+    if (text_P) strcpy_P(text, text_P); else text[0] = 0;
+  }
+  void clearText() { setText(NULL); }
 };
 
 struct ControlNode { Control* control; ControlNode* next; };
@@ -170,14 +174,12 @@ void setup(void) {
   statusBar2->x = 0; statusBar2->y = 0; statusBar2->width = 160; statusBar2->height = 13;
   statusBar2->color1 = COLOR_BLUE; statusBar2->color2 = ST7735_BLACK;
 
-  statusLabel = new Control(TYPE_LABEL, mainControl);
-  strcpy_P(statusLabel->text, TXT_NUL);
+  statusLabel = new Control(TYPE_LABEL, mainControl, NULL, true);
   statusLabel->x = 3; statusLabel->y = 112;
   statusLabel->color1 = ST7735_WHITE;
   
-  Control* ampiLabelMain = new Control(TYPE_LABEL, mainControl); //size x=y=0 to hide background
+  Control* ampiLabelMain = new Control(TYPE_LABEL, mainControl, TXT_AMPI); //size x=y=0 to hide background
   ampiLabelMain->x = 3; ampiLabelMain->y = 3;
-  strcpy_P(ampiLabelMain->text, TXT_AMPI);
   ampiLabelMain->color1 = COLOR_RED; ampiLabelMain->color2 = ST7735_BLACK;
     
   mainMenu = new Control(TYPE_LIST, mainControl);
@@ -185,21 +187,18 @@ void setup(void) {
   mainMenu->color1 = ST7735_WHITE; mainMenu->color2 = ST7735_BLACK;
   mainMenu->events = new Events(); mainMenu->events->onEnter = enterMenu;
 
-  rpiPowerItem = new Control(TYPE_ITEM, mainMenu);
+  rpiPowerItem = new Control(TYPE_ITEM, mainMenu, TXT_TURN_STREAMER_ON, true);
   rpiPowerItem->width = mainMenu->width; rpiPowerItem->height = 25; rpiPowerItem->x = 1;
-  strcpy_P(rpiPowerItem->text, TXT_TURN_STREAMER_ON);
   rpiPowerItem->color1 = ST7735_BLACK; rpiPowerItem->color2 = COLOR_RED;
   rpiPowerItem->events = new Events(); rpiPowerItem->events->onClick = swithRpiPower;
 
-  Control* pandoraItem = new Control(TYPE_ITEM, mainMenu);
+  Control* pandoraItem = new Control(TYPE_ITEM, mainMenu, TXT_PANDORA_MUSIC);
   pandoraItem->width = mainMenu->width; pandoraItem->height = 25; pandoraItem->x = 1; pandoraItem->y = 27  /*1*2+1*25*/; 
-  strcpy_P(pandoraItem->text, TXT_PANDORA_MUSIC);
   pandoraItem->color1 = ST7735_BLACK; pandoraItem->color2 = COLOR_RED;
   pandoraItem->events = new Events(); pandoraItem->events->onClick = switchPandora;
 
-  Control* appleItem = new Control(TYPE_ITEM, mainMenu);
+  Control* appleItem = new Control(TYPE_ITEM, mainMenu, TXT_APPLE_MUSIC);
   appleItem->width = mainMenu->width; appleItem->height = 25; appleItem->x = 1; appleItem->y = 54 /*2*2+2*25*/; 
-  strcpy_P(appleItem->text, TXT_APPLE_MUSIC);
   appleItem->color1 = ST7735_BLACK; appleItem->color2 = COLOR_RED;
   appleItem->events = new Events(); appleItem->events->onClick = switchAppleMusic;
 
@@ -240,15 +239,13 @@ void setup(void) {
   popupConfirmMenu->color1 = ST7735_WHITE; popupConfirmMenu->color2 = ST7735_BLACK;
   popupConfirmMenu->events = new Events(); popupConfirmMenu->events->onEnter = enterMenu;
  
-  Control* popupConfirmYesItem = new Control(TYPE_ITEM, popupConfirmMenu);
+  Control* popupConfirmYesItem = new Control(TYPE_ITEM, popupConfirmMenu, TXT_YES);
   popupConfirmYesItem->width = popupConfirmMenu->width; popupConfirmYesItem->height = 25; popupConfirmYesItem->x = 1;
-  strcpy(popupConfirmYesItem->text, "Yes!\0");
   popupConfirmYesItem->color1 = ST7735_BLACK; popupConfirmYesItem->color2 = COLOR_RED;
   popupConfirmYesItem->events = new Events(); popupConfirmYesItem->events->onClick = closePopupAndSwithRpiPower;
 
-  Control* popupConfirmNoItem = new Control(TYPE_ITEM, popupConfirmMenu);
+  Control* popupConfirmNoItem = new Control(TYPE_ITEM, popupConfirmMenu, TXT_NO_DONT);
   popupConfirmNoItem->width = popupConfirmMenu->width; popupConfirmNoItem->height = 25; popupConfirmNoItem->x = 1; popupConfirmNoItem->y = 26;
-  strcpy(popupConfirmNoItem->text, "No, don't.\0");
   popupConfirmNoItem->color1 = ST7735_BLACK; popupConfirmNoItem->color2 = COLOR_RED;
   popupConfirmNoItem->events = new Events();  popupConfirmNoItem->events->onClick = closePopup;
   
@@ -262,13 +259,15 @@ void setup(void) {
   renderQueueAllChildren(mainControl);
 
   renderRenderPipe();
+
+  
 }
 
 // GUI LIBARY IMPLEMENTATION
 
 void renderText(char* text, uint8_t x, uint8_t y, uint8_t width, uint8_t height, uint16_t color1, uint16_t color2) {
-  int16_t textx, texty;
-  uint16_t textwidth, textheight;
+  if (!text) return;
+  int16_t textx, texty; uint16_t textwidth, textheight;
   tft.getTextBounds(text, x, y, &textx, &texty, &textwidth, &textheight); //location is assumed top left point of text, but baseline of font
   texty += FONT_SHIFT_DOWN; //need to increase y to put anchor point top left: fixed value as fixed font
   if (!(width == 0 || height == 0)) { // a zero size hides does not render the background
@@ -467,7 +466,7 @@ void loop() {
 
 void swithRpiPower(Control* control) {
   rpiPower = !rpiPower;
-  if(rpiPower) { strcpy_P(control->text, TXT_TURNING_ON); digitalWrite(RPI_POWER, HIGH) /*turn relay ON*/; rpiPoweringUp = true;  memset(statusLabel->text, (char)0, MAX_TEXT) /*clear status text for animation with dots during power on...*/; } else { strcpy_P(control->text, TXT_TURNING_OFF);  Serial.print("<p>") /*Send Power Off command to Raspberry Pi*/ ;}
+  if(rpiPower) { control->setText(TXT_TURNING_ON); digitalWrite(RPI_POWER, HIGH) /*turn relay ON*/; rpiPoweringUp = true; memset(statusLabel->text, (char)0, MAX_TEXT) /*clear status text for animation with dots during power on...*/; } else { control->setText(TXT_TURNING_OFF);  Serial.print("<p>") /*Send Power Off command to Raspberry Pi*/ ;}
   lastRpiPower = rpiPower;
   renderPipe.add(control);
   renderPipe.add(control->parent);
@@ -475,8 +474,8 @@ void swithRpiPower(Control* control) {
 
 void rpiPowerOff() {
   rpiPowerIcon->color1 = COLOR_RED; renderPipe.add(rpiPowerIcon);
-  strcpy_P(rpiPowerItem->text, TXT_TURN_STREAMER_ON); renderPipe.add(rpiPowerItem); renderPipe.add(rpiPowerItem->parent);
-  strcpy_P(statusLabel->text, TXT_NUL); setStatus();
+  rpiPowerItem->setText(TXT_TURN_STREAMER_ON); renderPipe.add(rpiPowerItem); renderPipe.add(rpiPowerItem->parent);
+  statusLabel->clearText(); setStatus();
   digitalWrite(RPI_POWER, LOW) /*turn relay OFF*/;
   rpiPoweringDown = false;
 }
@@ -489,7 +488,7 @@ void setAllServicesRed() {
 
 void closePopup(Control* control) {
   popupControl->visible = false;
-  strcpy_P(statusLabel->text, TXT_NUL);
+  statusLabel->clearText();
   setStatus();
   renderPipe.add(mainControl);
   renderQueueAllChildren(mainControl);
@@ -506,8 +505,8 @@ void switchPandora(Control* control) {
     Serial.print("<N>"); Serial.flush();
   } else {
     popupControl->visible = true; 
-    strcpy_P(popupLabel1->text, TXT_TURN_ON_NOW);
-    strcpy_P(statusLabel->text, TXT_TURN_STREAMER_ON2); 
+    popupLabel1->setText(TXT_TURN_ON_NOW);
+    statusLabel->setText(TXT_TURN_STREAMER_ON2); 
     setStatus();
     renderPipe.add(popupControl); renderQueueAllChildren(popupControl);
     sendEnter(popupConfirmMenu);
@@ -518,12 +517,12 @@ void switchAppleMusic(Control* control) {
   if (rpiPower && !rpiPoweringUp) {
     Serial.print(F("<L>")); Serial.flush();
   } else {
-    //strcpy_P(statusLabel->text, TXT_TURN_STREAMER_ON2); setStatus();
-    strcpy_P(statusLabel->text, TXT_STREAMER_IS_READY);
-      setStatus();
-      rpiPowerIcon->color1 = ST7735_WHITE; renderPipe.add(rpiPowerIcon);
-      strcpy_P(rpiPowerItem->text, TXT_TURN_STREAMER_OFF); renderPipe.add(rpiPowerItem);
-      renderPipe.add(rpiPowerItem->parent); //main menu needs to update
+    popupControl->visible = true; 
+    popupLabel1->setText(TXT_TURN_ON_NOW);
+    statusLabel->setText(TXT_TURN_STREAMER_ON2); 
+    setStatus();
+    renderPipe.add(popupControl); renderQueueAllChildren(popupControl);
+    sendEnter(popupConfirmMenu);
   }
 }
 
@@ -554,10 +553,10 @@ void processReceiveBuffer() {
 
   switch (receiveBuffer[PPP_NDX_COMMAND]) {  //first byte to be expected signal/command type - second (depending on the command) is the size in bytes of the payload
     case PPP_T_POWER_ON_COMPLETE:
-      strcpy_P(statusLabel->text, TXT_STREAMER_IS_READY);
+      statusLabel->setText(TXT_STREAMER_IS_READY);
       setStatus();
       rpiPowerIcon->color1 = ST7735_WHITE; renderPipe.add(rpiPowerIcon);
-      strcpy_P(rpiPowerItem->text, TXT_TURN_STREAMER_OFF); renderPipe.add(rpiPowerItem);
+      rpiPowerItem->setText(TXT_TURN_STREAMER_OFF); renderPipe.add(rpiPowerItem);
       renderPipe.add(rpiPowerItem->parent); //main menu needs to update
       rpiPoweringUp = false;
       break;
@@ -565,7 +564,7 @@ void processReceiveBuffer() {
     case PPP_T_POWER_OFF_CONFIRMED: /*Power Off command received by Raspberry Pi and this is confirmation, it is shutting down */ 
       rpiPoweringDown = true;
       delayEnd = millis() + FIFTEEN_SECONDS;
-      strcpy_P(statusLabel->text, TXT_WAIT_FIFTEEN_SECONDS);
+      statusLabel->setText(TXT_WAIT_FIFTEEN_SECONDS);
       setStatus();
       setAllServicesRed();
       break;
