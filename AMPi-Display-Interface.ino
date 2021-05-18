@@ -30,7 +30,7 @@ const char TXT_STREAMER_IS_READY [] PROGMEM = "Streamer is ready";
 #define ROTENC_SW 4
 #define COLOR_RED 64611 /*tft.color565(255, 140, 26)*/
 #define COLOR_BLUE 11101 /*tft.color565(40, 106, 237)*/
-#define COLOR_GREY 0xCCC /*tft.color565(40, 106, 237)*/
+#define COLOR_ORANGE 0xf366 /*tft.color565(247, 109, 49)*/
 
 // GUI LIBARY DEFINITIONS
 
@@ -62,14 +62,14 @@ struct Control {
   const unsigned char* icon = NULL;
   Control* next = NULL; Control* parent = NULL; Control* child = NULL;
 
-  Control(byte type, Control* parent, char* text_P = NULL, bool maxText = false) {
+  Control(byte type, Control* parent, const char* text_P = NULL, bool maxText = false) {
     this->type = type;
     this->parent = parent;
     if (type != TYPE_RECTANGLE) { color1 = ST7735_WHITE; color2 = ST7735_BLACK; } else { color1 = ST7735_BLACK; color2 = ST7735_BLACK; }
     if (maxText) text = (char*)malloc(MAX_TEXT); else if (text_P) text = (char*)malloc(1+strlen_P(text_P)); //set dynamic text will use MAX_TEXT size instead of needed bytes for fixed label
     if (text_P) strcpy_P(text, text_P); else if (text) text[0] = 0; //optionally with initial text_P text from PROGMEM
   };
-  void setText(char* text_P) {
+  void setText(const char* text_P) {
     if (!text) text = (char*)malloc(MAX_TEXT); //just when we did not initialize by mistake - unnecessary when code is well written, i.e. not setting text when not initialized
     if (text_P) strcpy_P(text, text_P); else text[0] = 0;
   }
@@ -140,9 +140,8 @@ Control* focusControl;
 Control* statusBar; Control* statusLabel;
 Control* rpiPowerIcon; Control* airplayIcon; Control* pandoraIcon; Control* appleMusicIcon;; Control* chromeCastIcon;
 Control* mainMenu; Control* rpiPowerItem;
-Control* popupControl;
-Control* popupLabel1;
-Control* popupConfirmMenu;
+Control* popupControl; Control* popupLabel1; Control* popupConfirmMenu;
+Control* playerControl;
 
 // INITIALIZATION
 
@@ -153,6 +152,8 @@ void checkPosition() {
 void setup(void) {
   Serial.begin(9600); // open the serial port at 9600 bps:
  
+ Serial.print(COLOR_ORANGE);
+
   tft.initR(INITR_BLACKTAB); tft.setRotation(1); tft.setFont(&FreeSans9pt7b); //initialize display & set default font
  
   //RPi Power
@@ -229,8 +230,8 @@ void setup(void) {
 
   //build popup GUI
   popupControl = new Control(TYPE_RECTANGLE, mainControl);
-  popupControl->x = 4; popupControl->y = 2; popupControl->width = 156; popupControl->height = 107;
-  popupControl->color1 = COLOR_GREY; popupControl->color2 = COLOR_BLUE;
+  popupControl->x = 4; popupControl->y = 2; popupControl->width = 152; popupControl->height = 107;
+  popupControl->color1 = COLOR_ORANGE; popupControl->color2 = COLOR_BLUE;
   popupControl->visible = false;
 
   popupLabel1 = new Control(TYPE_LABEL, popupControl); //size x=y=0 to hide background
@@ -256,14 +257,19 @@ void setup(void) {
 
   popupControl->child = popupLabel1; popupLabel1->next = popupConfirmMenu; //popupConfirmMenu->next = null;
   
-  mainControl->child = statusBar; statusBar->next = statusBar2; statusBar2->next = statusLabel; statusLabel->next = ampiLabelMain; ampiLabelMain->next = mainMenu; mainMenu->next = rpiPowerIcon; rpiPowerIcon->next = airplayIcon; airplayIcon->next = pandoraIcon; pandoraIcon->next = appleMusicIcon; appleMusicIcon->next = chromeCastIcon; chromeCastIcon->next = popupControl; //popupControl->next = null; //build main GUI
+  //build player gui
+  playerControl = new Control(TYPE_RECTANGLE, mainControl);
+  playerControl->x = 4; playerControl->y = 2; playerControl->width = 152; playerControl->height = 107;
+  playerControl->color1 = COLOR_ORANGE; playerControl->color2 = COLOR_ORANGE;
+  playerControl->visible = false;
+
+  //connect main gui components
+  mainControl->child = statusBar; statusBar->next = statusBar2; statusBar2->next = statusLabel; statusLabel->next = ampiLabelMain; ampiLabelMain->next = mainMenu; mainMenu->next = rpiPowerIcon; rpiPowerIcon->next = airplayIcon; airplayIcon->next = pandoraIcon; pandoraIcon->next = appleMusicIcon; appleMusicIcon->next = chromeCastIcon; chromeCastIcon->next = popupControl; popupControl->next = playerControl; //playerControl->next = null  //build main GUI
 
   renderPipe.add(mainControl);
   renderQueueAllChildren(mainControl);
 
   renderRenderPipe();
-
-  
 }
 
 // GUI LIBARY IMPLEMENTATION
