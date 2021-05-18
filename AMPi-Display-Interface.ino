@@ -110,6 +110,8 @@ struct ControlList {
 #define PPP_T_PANDORA_MUSIC_ICON_COLOR 0x4E //N   <N\x03RGB>
 #define PPP_T_APPLE_MUSIC_ICON_COLOR 0x4C   //L   <L\x03RGB>
 #define PPP_T_STATUS_TEXT 0x53              //S   <SsizeTEXT>
+#define PPP_T_BLOCK 0x42                    //B   <B>
+#define PPP_T_UNBLOCK 0x62                  //b   <b>
 
 unsigned char receiveBuffer[MAX_MESSAGE];
 bool receiving = false;
@@ -129,6 +131,7 @@ bool rpiPower = false;
 bool lastRpiPower = true;
 bool rpiPoweringDown = false;
 bool rpiPoweringUp = false;
+bool blocked = false;
 unsigned long delayEnd;
 bool buttonDown = false;
 int encoderPosition = 0;
@@ -175,7 +178,7 @@ void setup(void) {
   statusBar2->color1 = COLOR_BLUE; statusBar2->color2 = ST7735_BLACK;
 
   statusLabel = new Control(TYPE_LABEL, mainControl, NULL, true);
-  statusLabel->x = 3; statusLabel->y = 112;
+  statusLabel->x = 3; statusLabel->y = 110;
   statusLabel->color1 = ST7735_WHITE;
   
   Control* ampiLabelMain = new Control(TYPE_LABEL, mainControl, TXT_AMPI); //size x=y=0 to hide background
@@ -451,22 +454,28 @@ void loop() {
       buttonDown = true;
     } else buttonDown = false;
   } else if (rpiPoweringDown && millis() > delayEnd) rpiPowerOff(); //as the Raspberry Pi powering down we need to wait it out (fixed timer of 15 seconds, not fancy) and at the end of timer change icon colors and change rpiPower booleans
-  if (rpiPoweringUp) {
-      delay(500); //wait 500ms
-      for (uint8_t i = 0; i < MAX_TEXT-1; i++) {
-        if (statusLabel->text[i] == 0) { statusLabel->text[i] = '.' ; statusLabel->text[i+1] == 0; break; }
-      }
-      setStatus();
-  }
+  if (rpiPoweringUp || blocked) waitAnimate();
   if (readSerialData()) processReceiveBuffer(); //process serial data
   if (renderPipe.first) renderRenderPipe();
 }
 
 // GUI ACTIONS
 
+void waitAnimate() {
+  if (statusLabel->text[0] != '.' || statusLabel->text[15] == '.') {
+    memset(statusLabel->text, (char)0, MAX_TEXT) /*clear status text for animation, when not going or when full restart */;
+    renderPipe.add(statusBar); //background label needs to update
+  }
+  delay(500); //wait 500ms
+  for (uint8_t i = 0; i < MAX_TEXT-1; i++) {
+    if (statusLabel->text[i] == 0) { statusLabel->text[i] = '.' ; statusLabel->text[i+1] == 0; break; }
+  }
+  renderPipe.add(statusLabel); //status label needs to update
+}
+
 void swithRpiPower(Control* control) {
   rpiPower = !rpiPower;
-  if(rpiPower) { control->setText(TXT_TURNING_ON); digitalWrite(RPI_POWER, HIGH) /*turn relay ON*/; rpiPoweringUp = true; memset(statusLabel->text, (char)0, MAX_TEXT) /*clear status text for animation with dots during power on...*/; } else { control->setText(TXT_TURNING_OFF);  Serial.print("<p>") /*Send Power Off command to Raspberry Pi*/ ;}
+  if(rpiPower) { control->setText(TXT_TURNING_ON); digitalWrite(RPI_POWER, HIGH) /*turn relay ON*/; rpiPoweringUp = true; } else { control->setText(TXT_TURNING_OFF);  Serial.print("<p>") /*Send Power Off command to Raspberry Pi*/ ;}
   lastRpiPower = rpiPower;
   renderPipe.add(control);
   renderPipe.add(control->parent);
@@ -574,7 +583,7 @@ void processReceiveBuffer() {
       break;
       
     case PPP_T_PANDORA_MUSIC_ICON_COLOR:
-      pandoraIcon->color1 = readRGB88AndConvertRGB656(receiveBuffer,2); renderPipe.add(pandoraIcon); //third, forth & fifth byte are new color for the airplay icon
+      pandoraIcon->color1 = readRGB88AndConvertRGB656(receiveBuffer,2); renderPipe.add(pandoraIcon); //third, forth & fifth byte are new color for the pandora icon
       break;
 
     case PPP_T_APPLE_MUSIC_ICON_COLOR:
@@ -585,10 +594,18 @@ void processReceiveBuffer() {
       receiveBuffer[PPP_NDX_LENGTH+size_+1] = 0; //terminate with zero byte
       strcpy(statusLabel->text, (char*)&receiveBuffer[2]); setStatus();
       break;
+
+    case PPP_T_BLOCK:
+      blocked = true;
+      break;
+
+    case PPP_T_UNBLOCK:
+      blocked = false;
+      break;
       
     case PPP_T_NO_OPERATION:     
       break;
-      
+
     default:
       sprintf(statusLabel->text, "%d NOT IMPL'D\n", (byte)receiveBuffer[PPP_NDX_COMMAND]); setStatus(); //render whatever is in statusLabel->text
       break;
