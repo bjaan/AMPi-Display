@@ -9,7 +9,6 @@ This repository is the code for the Arduino Nano. For the code running on the Ra
 First prototype (WIP) with Raspberry Pi Model 3 and an Arduino Nano
 
 ![Front Side (first prototype)](https://raw.githubusercontent.com/bjaan/AMPi-Display-Interface/main/firstprototype-top.jpg)
-![Back Side (first prototype)](https://raw.githubusercontent.com/bjaan/AMPi-Display-Interface/main/firstprototype-back.jpg)
 
 # AMPi features
 
@@ -140,6 +139,8 @@ Serial Monitor > 9600 baud
 * [Kapton Tape](https://www.aliexpress.com/item/4001221342106.html)
 * Hot glue (sorry, not sorry) to hold the VU-meter and Micro-SD Card Holder *strongly* in place, later rework required
 * Speakers - I used a pair of repaired German 3-way HECO/Summit/Hans G. Hennel speakers marked "Hifi-Stereo-Box LX90" from the 70's or early 80's (SUMMIT brand is on the crossover print only, no external brand name is left) with these specifications: "60/90W 22..20000Hz 4 Ohm"
+
+![Back Side (first prototype)](https://raw.githubusercontent.com/bjaan/AMPi-Display-Interface/main/firstprototype-back.jpg)
 
 # Tools used
 * Soldering iron & Solder
