@@ -1,8 +1,8 @@
 # AMPi-Display-Interface
 
-AMPi is an audio receiver that integrates an amplifier with a mains electricity power supply, an 4-channel audio relay switcher, a ground loop isolator, a Raspberry Pi with DAC-HAT, a ST7735-based TFT-display, and an Arduino Nano micro-controller.
+AMPi is an audio receiver that integrates an amplifier with a mains electricity power supply, a 4-channel audio relay switcher, a ground loop isolator, a Raspberry Pi with a DAC-HAT, a ST7735-based TFT-display, and an Arduino Nano micro-controller.
 
-It is an integrated audio system that integrates 3 analog stereo inputs and digital-to-analog converter that supports high-quality internet audio streaming, like AirPlay, over either wired Ethernet or Wi-Fi and wireless audio technology (Bluetooth 4.2) in one box less than 10 inches (250mm) wide, 4 inches (80mm) high, and 8 inches (190mm) deep.
+It is an integrated audio system that combines 3 external analog stereo inputs and digital-to-analog converter that supports high-quality audio playback though wireless or wired local area network audio streaming (like AirPlay), and internet audio streaming (like Pandora.com), and personal area networks (Bluetooth 4.2) in one box less than 10 inches (250mm) wide, 4 inches (80mm) high, and 8 inches (190mm) deep.
 
 This repository is the code for the Arduino Nano. For the code running on the Raspberry Pi, go to the [AMPi-Service](https://github.com/bjaan/AMPi-Service/) repository.
 
@@ -15,9 +15,9 @@ First prototype (WIP) with Raspberry Pi Model 3 and an Arduino Nano
 * Mini size 250mm x 190mm x 80mm. Maxi sound
 * 2 channels x 100W (Stereo) Class D Audio Amplifier
 * Built-in internet audio streaming device with high-quality Digital-to-Analog Converter (DAC), e.g. FLAC 24-bits 192khz
-* Built-in pre-amplifier and audio transformers, to allow full galvanic separation between external audio equipment and the DAC and AMPi
+* Built-in pre-amplifier and audio transformers functioning as a ground loop isolator. This allows for a full galvanic separation between external audio equipment and the DAC and AMPi
 * Computer-controlled interface that controls the screen, manages the power of and the services running on the built-in audio streaming device
-* 3 switchable analog audio input channels using a relay array through a rotary switch
+* 3 switchable external analog audio input channels using a relay array through a rotary switch
 * Audio level indicator
 * Built-in mains power supply (100-230V)
 * AirPlay playback using [Shairport Sync](https://github.com/mikebrady/shairport-sync). AMPi identifies itself as a AirPlay network player, where your iPhone or iTunes on a Mac can be connected to, to play music.  You can also use iTunes on Windows 10 to play music through AirPlay or route your audio to AMPi using [TuneBlade](http://www.tuneblade.com/)
