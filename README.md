@@ -4,7 +4,7 @@ AMPi is an audio receiver that integrates an amplifier with a mains electricity 
 
 It is an integrated audio system that combines 3 external analog stereo inputs and digital-to-analog converter that supports high-quality audio playback though wireless or wired local area network audio streaming (like AirPlay), and internet audio streaming (like Pandora.com), and personal area networks (Bluetooth 4.2) in one box less than 10 inches (250mm) wide, 4 inches (80mm) high, and 8 inches (190mm) deep.
 
-This repository is the code for the Arduino Nano. For the code running on the Raspberry Pi, go to the [AMPi-Service](https://github.com/bjaan/AMPi-Service/) repository.
+This repository is the code for the Arduino Nano. For the software and code running on the Raspberry Pi, go to the [AMPi-Service](https://github.com/bjaan/AMPi-Service/) repository.
 
 First prototype (WIP) with Raspberry Pi Model 3 and an Arduino Nano
 
@@ -31,6 +31,7 @@ First prototype (WIP) with Raspberry Pi Model 3 and an Arduino Nano
 * Raspberry Pi Software - further integration with the display interface component
 * Interface to enter Wi-Fi / LAN settings
 * Streaming software for Apple Music
+* Add CD Player interface for external USB drive
 * ...and more
 
 # Arduino Nano pin connections

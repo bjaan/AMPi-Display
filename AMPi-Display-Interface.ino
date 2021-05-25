@@ -40,10 +40,15 @@ const char TXT_STREAMER_IS_READY [] PROGMEM = "Streamer is ready";
 #define TYPE_LIST 30
 #define TYPE_ICON 40
 #define TYPE_ITEM 50
+#define TYPE_CANVAS 60
 
-#define MAX_MESSAGE 50
+#define SERIAL_BAUD_RATE 115200
+#define CHAR_BIT 8
+#define MAX_MESSAGE 150
 #define MAX_TEXT 35
 #define FONT_SHIFT_DOWN 14
+#define CANVAS_BLOCK_SIZE 5
+#define DOT '.'
 
 struct Control;
 
@@ -102,6 +107,7 @@ struct ControlList {
 #define PPP_END_FLAG 0x3E
 #define PPP_NDX_COMMAND 0
 #define PPP_NDX_LENGTH 1
+#define PPP_NDX_DATA 2
 #define FIFTEEN_SECONDS 15000
 #define PPP_T_NO_OPERATION 0x00
 #define PPP_T_POWER_ON_COMPLETE 0x50        //P   <P>
@@ -112,12 +118,18 @@ struct ControlList {
 #define PPP_T_STATUS_TEXT 0x53              //S   <SsizeTEXT>
 #define PPP_T_BLOCK 0x42                    //B   <B>
 #define PPP_T_UNBLOCK 0x62                  //b   <b>
+#define PPP_T_DRAWPIXELBLOCK 0x44           //D   <D\x82xypixeldata>  shown in player interface
+#define PPP_NDX_BLOCKINDEX_X 2
+#define PPP_NDX_BLOCKINDEX_Y 3
+#define PPP_NDX_BLOCKDATA 4
+#define PPP_T_HIDE_PLAYER 0x64              //d   <d>   hide player interface
 
 unsigned char receiveBuffer[MAX_MESSAGE];
 bool receiving = false;
 unsigned char receiveIndex = 0;
 unsigned char receiveSizeLeft = 0;
 unsigned char character;
+bool readyForNewData = true;
 
 // DISPLAY & ROTARY ENCODE DEFINITIONS
 
@@ -141,7 +153,7 @@ Control* statusBar; Control* statusLabel;
 Control* rpiPowerIcon; Control* airplayIcon; Control* pandoraIcon; Control* appleMusicIcon;; Control* chromeCastIcon;
 Control* mainMenu; Control* rpiPowerItem;
 Control* popupControl; Control* popupLabel1; Control* popupConfirmMenu;
-Control* playerControl;
+Control* playerControl; Control* blockCanvas;
 
 // INITIALIZATION
 
@@ -150,10 +162,8 @@ void checkPosition() {
 }
 
 void setup(void) {
-  Serial.begin(9600); // open the serial port at 9600 bps:
+  Serial.begin(SERIAL_BAUD_RATE); // open the serial port at 9600 bps:
  
- Serial.print(COLOR_ORANGE);
-
   tft.initR(INITR_BLACKTAB); tft.setRotation(1); tft.setFont(&FreeSans9pt7b); //initialize display & set default font
  
   //RPi Power
@@ -260,8 +270,13 @@ void setup(void) {
   //build player gui
   playerControl = new Control(TYPE_RECTANGLE, mainControl);
   playerControl->x = 4; playerControl->y = 2; playerControl->width = 152; playerControl->height = 107;
-  playerControl->color1 = COLOR_ORANGE; playerControl->color2 = COLOR_ORANGE;
+  playerControl->color1 = ST7735_BLACK; playerControl->color2 = ST7735_BLACK;
   playerControl->visible = false;
+
+  blockCanvas = new Control(TYPE_CANVAS, playerControl);
+  blockCanvas->x = 4; blockCanvas->y = 2; blockCanvas->width = 152; blockCanvas->height = 107;
+
+  playerControl->child = blockCanvas; //blockCanvas->next = null;
 
   //connect main gui components
   mainControl->child = statusBar; statusBar->next = statusBar2; statusBar2->next = statusLabel; statusLabel->next = ampiLabelMain; ampiLabelMain->next = mainMenu; mainMenu->next = rpiPowerIcon; rpiPowerIcon->next = airplayIcon; airplayIcon->next = pandoraIcon; pandoraIcon->next = appleMusicIcon; appleMusicIcon->next = chromeCastIcon; chromeCastIcon->next = popupControl; popupControl->next = playerControl; //playerControl->next = null  //build main GUI
@@ -330,6 +345,18 @@ void render(Control* c) {
             tft.drawRect(c->x + item->x, c->y + item->x + item->y, item->width - item->x - item->x, item->height - item->x - item->x, (item->selected ? item->color2 : item->color1));
             item = item->next;
           }
+        }
+        break;
+      case TYPE_CANVAS:
+        uint8_t x = c->x + (receiveBuffer[PPP_NDX_BLOCKINDEX_X] * CANVAS_BLOCK_SIZE); uint8_t y = c->y + (receiveBuffer[PPP_NDX_BLOCKINDEX_Y] * CANVAS_BLOCK_SIZE); //calculate position
+        uint8_t z = PPP_NDX_BLOCKDATA;
+        for (i = 0; i < CANVAS_BLOCK_SIZE; i++) { //unrolled loop
+          tft.drawPixel(x++, y, ((uint16_t)receiveBuffer[z++] << CHAR_BIT) + receiveBuffer[z++]);  //1
+          tft.drawPixel(x++, y, ((uint16_t)receiveBuffer[z++] << CHAR_BIT) + receiveBuffer[z++]);  //2
+          tft.drawPixel(x++, y, ((uint16_t)receiveBuffer[z++] << CHAR_BIT) + receiveBuffer[z++]);  //3
+          tft.drawPixel(x++, y, ((uint16_t)receiveBuffer[z++] << CHAR_BIT) + receiveBuffer[z++]);  //4
+          tft.drawPixel(x++, y, ((uint16_t)receiveBuffer[z++] << CHAR_BIT) + receiveBuffer[z++]);  //5
+          y++; x-=CANVAS_BLOCK_SIZE;
         }
         break;
     }
@@ -461,27 +488,27 @@ void loop() {
     } else buttonDown = false;
   } else if (rpiPoweringDown && millis() > delayEnd) rpiPowerOff(); //as the Raspberry Pi powering down we need to wait it out (fixed timer of 15 seconds, not fancy) and at the end of timer change icon colors and change rpiPower booleans
   if (rpiPoweringUp || blocked) waitAnimate();
-  if (readSerialData()) processReceiveBuffer(); //process serial data
+  if (!readyForNewData) { Serial.print("<y>"); Serial.flush(); readyForNewData = true; } else if (readSerialData()) processReceiveBuffer(); //process serial data
   if (renderPipe.first) renderRenderPipe();
 }
 
 // GUI ACTIONS
 
 void waitAnimate() {
-  if (statusLabel->text[0] != '.' || statusLabel->text[15] == '.') {
+  if (statusLabel->text[0] != DOT || statusLabel->text[15] == DOT) {
     memset(statusLabel->text, (char)0, MAX_TEXT) /*clear status text for animation, when not going or when full restart */;
     renderPipe.add(statusBar); //background label needs to update
   }
   delay(500); //wait 500ms
   for (uint8_t i = 0; i < MAX_TEXT-1; i++) {
-    if (statusLabel->text[i] == 0) { statusLabel->text[i] = '.' ; statusLabel->text[i+1] == 0; break; }
+    if (statusLabel->text[i] == 0) { statusLabel->text[i] = DOT ; statusLabel->text[i+1] == 0; break; }
   }
   renderPipe.add(statusLabel); //status label needs to update
 }
 
 void swithRpiPower(Control* control) {
   rpiPower = !rpiPower;
-  if(rpiPower) { control->setText(TXT_TURNING_ON); digitalWrite(RPI_POWER, HIGH) /*turn relay ON*/; rpiPoweringUp = true; } else { control->setText(TXT_TURNING_OFF);  Serial.print("<p>") /*Send Power Off command to Raspberry Pi*/ ;}
+  if(rpiPower) { control->setText(TXT_TURNING_ON); digitalWrite(RPI_POWER, HIGH) /*turn relay ON*/; rpiPoweringUp = true; } else { control->setText(TXT_TURNING_OFF);  Serial.print("<p>") /*Send Power Off command to Raspberry Pi*/ ; Serial.flush(); }
   lastRpiPower = rpiPower;
   renderPipe.add(control);
   renderPipe.add(control->parent);
@@ -541,8 +568,17 @@ void switchAppleMusic(Control* control) {
   }
 }
 
+void hidePlayer() {
+  if (playerControl->visible) {
+    playerControl->visible = false;
+    renderPipe.add(mainControl);
+    renderQueueAllChildren(mainControl);
+    enterMenu(mainMenu);
+  }
+}
+
 bool readSerialData() {
- while (Serial.available() > 0) {
+  while (Serial.available() > 0) {
     character = Serial.read();
     if (!receiving) {
       if (character == PPP_BEGIN_FLAG) { receiving = true; receiveIndex = 0; receiveSizeLeft = 1 /*the command is expected - so 1 byte*/; }
@@ -568,6 +604,7 @@ void processReceiveBuffer() {
 
   switch (receiveBuffer[PPP_NDX_COMMAND]) {  //first byte to be expected signal/command type - second (depending on the command) is the size in bytes of the payload
     case PPP_T_POWER_ON_COMPLETE:
+      if (playerControl->visible) hidePlayer();
       statusLabel->setText(TXT_STREAMER_IS_READY);
       setStatus();
       rpiPowerIcon->color1 = ST7735_WHITE; renderPipe.add(rpiPowerIcon);
@@ -608,7 +645,21 @@ void processReceiveBuffer() {
     case PPP_T_UNBLOCK:
       blocked = false;
       break;
-      
+    
+    case PPP_T_DRAWPIXELBLOCK:
+      if (!playerControl->visible) {
+        playerControl->visible = true;
+        renderPipe.add(playerControl);
+        focusControl = playerControl;
+      }
+      renderPipe.add(blockCanvas);
+      readyForNewData = false;
+      break;
+
+    case PPP_T_HIDE_PLAYER:
+      hidePlayer();
+      break;
+
     case PPP_T_NO_OPERATION:     
       break;
 
