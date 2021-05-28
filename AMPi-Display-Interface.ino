@@ -46,6 +46,8 @@ const char TXT_STREAMER_IS_READY [] PROGMEM = "Streamer is ready";
 #define CHAR_BIT 8
 #define MAX_MESSAGE 150
 #define MAX_TEXT 35
+#define H_SCROLL_MIN_SIZE 158
+#define H_SCROLL 120
 #define FONT_SHIFT_DOWN 14
 #define CANVAS_BLOCK_SIZE 5
 #define DOT '.'
@@ -53,7 +55,7 @@ const char TXT_STREAMER_IS_READY [] PROGMEM = "Streamer is ready";
 struct Control;
 
 typedef void (*Event) (Control* control);
-struct Events { Event onClick; Event onEnter; Event onExit; };
+struct Events { Event onClick; Event onEnter; Event onUp; Event onDown; };
 
 struct Control {
   uint8_t type;
@@ -88,7 +90,7 @@ struct ControlList {
   void add(Control* c) {
     ControlNode* node = first; //start checking if the control is already added
     while (node) {
-      if (node->control == c) return; //found! stop looking and don't add
+      //disabled for now if (node->control == c) return; //found! stop looking and don't add
       node = node->next;
     }
     //not found! create node & add it to list
@@ -108,6 +110,7 @@ struct ControlList {
 #define PPP_NDX_COMMAND 0
 #define PPP_NDX_LENGTH 1
 #define PPP_NDX_DATA 2
+#define ONE_SECOND 1000
 #define FIFTEEN_SECONDS 15000
 #define PPP_T_NO_OPERATION 0x00
 #define PPP_T_POWER_ON_COMPLETE 0x50        //P   <P>
@@ -130,6 +133,7 @@ unsigned char receiveIndex = 0;
 unsigned char receiveSizeLeft = 0;
 unsigned char character;
 bool readyForNewData = true;
+unsigned char bufferToSizeBounds[] =  { 0x00, 0x00 }; uint16_t scrollPosition = 0; uint16_t scrollWidth = 0;
 
 // DISPLAY & ROTARY ENCODE DEFINITIONS
 
@@ -144,13 +148,13 @@ bool lastRpiPower = true;
 bool rpiPoweringDown = false;
 bool rpiPoweringUp = false;
 bool blocked = false;
-unsigned long delayEnd;
+unsigned long delayEnd = 0; unsigned long scrollEnd = 0;
 bool buttonDown = false;
 int encoderPosition = 0;
 Control* mainControl; 
-Control* focusControl;
+Control* focusControl; Control* scrollLabel; Control* scrollBackground;
 Control* statusBar; Control* statusLabel;
-Control* rpiPowerIcon; Control* airplayIcon; Control* pandoraIcon; Control* appleMusicIcon;; Control* chromeCastIcon;
+Control* rpiPowerIcon; Control* airplayIcon; Control* pandoraIcon; Control* appleMusicIcon; Control* chromeCastIcon;
 Control* mainMenu; Control* rpiPowerItem;
 Control* popupControl; Control* popupLabel1; Control* popupConfirmMenu;
 Control* playerControl; Control* blockCanvas;
@@ -164,7 +168,7 @@ void checkPosition() {
 void setup(void) {
   Serial.begin(SERIAL_BAUD_RATE); // open the serial port at 9600 bps:
  
-  tft.initR(INITR_BLACKTAB); tft.setRotation(1); tft.setFont(&FreeSans9pt7b); //initialize display & set default font
+  tft.initR(INITR_BLACKTAB); tft.setRotation(1); tft.setFont(&FreeSans9pt7b); tft.setTextWrap(false); //initialize display & set default font
  
   //RPi Power
   pinMode(RPI_POWER, OUTPUT);    // sets the digital pin 2 as output
@@ -180,22 +184,25 @@ void setup(void) {
   mainControl->color2 = ST7735_BLACK; //background color
 
   //initialize status bar
+  
+  Control* topbar = new Control(TYPE_RECTANGLE, mainControl);
+  topbar->x = 0; topbar->y = 0; topbar->width = 160; topbar->height = 13;
+  topbar->color1 = COLOR_BLUE; topbar->color2 = ST7735_BLACK;
+
+  Control* ampiLabelMain = new Control(TYPE_LABEL, mainControl, TXT_AMPI); //size x=y=0 to hide background
+  ampiLabelMain->x = 3; ampiLabelMain->y = 3;
+  ampiLabelMain->color1 = COLOR_RED; ampiLabelMain->color2 = ST7735_BLACK;
+
   statusBar = new Control(TYPE_RECTANGLE, mainControl);
   statusBar->x = 0; statusBar->y = 111 /*128 - 17*/; statusBar->width = 160; statusBar->height = 17;
   statusBar->color1 = ST7735_BLACK; statusBar->color2 = COLOR_BLUE;
-
-  Control* statusBar2 = new Control(TYPE_RECTANGLE, mainControl);
-  statusBar2->x = 0; statusBar2->y = 0; statusBar2->width = 160; statusBar2->height = 13;
-  statusBar2->color1 = COLOR_BLUE; statusBar2->color2 = ST7735_BLACK;
+  scrollBackground = statusBar; //background for scrollLabel
 
   statusLabel = new Control(TYPE_LABEL, mainControl, NULL, true);
   statusLabel->x = 3; statusLabel->y = 110;
   statusLabel->color1 = ST7735_WHITE;
-  
-  Control* ampiLabelMain = new Control(TYPE_LABEL, mainControl, TXT_AMPI); //size x=y=0 to hide background
-  ampiLabelMain->x = 3; ampiLabelMain->y = 3;
-  ampiLabelMain->color1 = COLOR_RED; ampiLabelMain->color2 = ST7735_BLACK;
-    
+  scrollLabel = statusLabel; //set label to scroll when text is too big too big to fit on the screen
+
   mainMenu = new Control(TYPE_LIST, mainControl);
   mainMenu->x = 3; mainMenu->y = 25; mainMenu->width = 154 /*160 - 6*/; mainMenu->height = 81 /*2*3+25*3*/;
   mainMenu->color1 = ST7735_WHITE; mainMenu->color2 = ST7735_BLACK;
@@ -272,6 +279,7 @@ void setup(void) {
   playerControl->x = 4; playerControl->y = 2; playerControl->width = 152; playerControl->height = 107;
   playerControl->color1 = ST7735_BLACK; playerControl->color2 = ST7735_BLACK;
   playerControl->visible = false;
+  playerControl->events = new Events(); playerControl->events->onClick = clickPlayer; playerControl->events->onUp = upPlayer; playerControl->events->onDown = downPlayer;
 
   blockCanvas = new Control(TYPE_CANVAS, playerControl);
   blockCanvas->x = 4; blockCanvas->y = 2; blockCanvas->width = 152; blockCanvas->height = 107;
@@ -279,7 +287,7 @@ void setup(void) {
   playerControl->child = blockCanvas; //blockCanvas->next = null;
 
   //connect main gui components
-  mainControl->child = statusBar; statusBar->next = statusBar2; statusBar2->next = statusLabel; statusLabel->next = ampiLabelMain; ampiLabelMain->next = mainMenu; mainMenu->next = rpiPowerIcon; rpiPowerIcon->next = airplayIcon; airplayIcon->next = pandoraIcon; pandoraIcon->next = appleMusicIcon; appleMusicIcon->next = chromeCastIcon; chromeCastIcon->next = popupControl; popupControl->next = playerControl; //playerControl->next = null  //build main GUI
+  mainControl->child = topbar; topbar->next = ampiLabelMain; ampiLabelMain->next = statusBar; statusBar->next = statusLabel; statusLabel->next = mainMenu; mainMenu->next = rpiPowerIcon; rpiPowerIcon->next = airplayIcon; airplayIcon->next = pandoraIcon; pandoraIcon->next = appleMusicIcon; appleMusicIcon->next = chromeCastIcon; chromeCastIcon->next = popupControl; popupControl->next = playerControl; //playerControl->next = null  //build main GUI
 
   renderPipe.add(mainControl);
   renderQueueAllChildren(mainControl);
@@ -289,7 +297,7 @@ void setup(void) {
 
 // GUI LIBARY IMPLEMENTATION
 
-void renderText(char* text, uint8_t x, uint8_t y, uint8_t width, uint8_t height, uint16_t color1, uint16_t color2) {
+void renderText(char* text, uint8_t x, uint8_t y, uint8_t width, uint8_t height, uint16_t color1, uint16_t color2, bool setScrollWidth) {
   if (!text) return;
   int16_t textx, texty; uint16_t textwidth, textheight;
   tft.getTextBounds(text, x, y, &textx, &texty, &textwidth, &textheight); //location is assumed top left point of text, but baseline of font
@@ -297,11 +305,16 @@ void renderText(char* text, uint8_t x, uint8_t y, uint8_t width, uint8_t height,
   if (!(width == 0 || height == 0)) { // a zero size hides does not render the background
     tft.fillRect(x, y, width, height, color2);
   }
+  if (setScrollWidth) {
+    scrollWidth = textwidth;
+    textx = (int16_t)x - (int16_t)scrollPosition;
+  } else textx = x;
   if (text[0] != 0) {
-    tft.setCursor(x, y + FONT_SHIFT_DOWN); //also print text lower as it needs to anchored on the top left
+    tft.setCursor(textx, y + FONT_SHIFT_DOWN); //also print text lower as it needs to anchored on the top left
     tft.setTextColor(color1);
     tft.print(text);
   }
+  
 }
 
 void renderItem(Control* item)
@@ -318,23 +331,21 @@ void renderItem(Control* item)
   uint8_t texty = item->parent->y + item->x + item->x + item->x + item->y;
   uint8_t textwidth = item->width - item->x - item->x - item->x - item->x;
   uint8_t textheight = item->height - item->x - item->x - item->x - item->x; 
-  renderText(item->text, textx, texty, textwidth, textheight, item->parent->color1, item->parent->color2);
+  renderText(item->text, textx, texty, textwidth, textheight, item->parent->color1, item->parent->color2, false);
 }
 
 void render(Control* c) {
-  uint16_t i; //used for loops
   if (c->visible) {
     switch (c->type) {
       case TYPE_MAIN: tft.fillScreen(c->color2); break;
-      case TYPE_LABEL: renderText(c->text, c->x, c->y, c->width, c->height, c->color1, c->color2); break;
-      case TYPE_RECTANGLE: 
-        if (c->width > 0 && c->height > 0)
-          if (c->color1 == c->color2) tft.fillRect(c->x, c->y, c->width, c->height, c->color2);
-          else {
-            uint8_t r1, g1, b1; color565toRGB(c->color1, r1, g1, b1);
-            uint8_t r2, g2, b2; color565toRGB(c->color2, r1, g2, b2);
-            for (i = 0; i < c->height; i++) { tft.drawFastHLine( c->x, c->y + i, c->width, tft.color565(map(i, 0, c->height, r1, r2), map(i, 0, c->height, g1, g2), map(i, 0, c->height, b1, b2))); }
-          }
+      case TYPE_LABEL: renderText(c->text, c->x, c->y, c->width, c->height, c->color1, c->color2, c == scrollLabel); break;
+      case TYPE_RECTANGLE: if (c->width > 0 && c->height > 0)
+        if (c->color1 == c->color2) tft.fillRect(c->x, c->y, c->width, c->height, c->color2);
+        else {
+          uint8_t r1, g1, b1; color565toRGB(c->color1, r1, g1, b1);
+          uint8_t r2, g2, b2; color565toRGB(c->color2, r1, g2, b2);
+          for (uint8_t i = 0; i < c->height; i++) { tft.drawFastHLine( c->x, c->y + i, c->width, tft.color565(map(i, 0, c->height, r1, r2), map(i, 0, c->height, g1, g2), map(i, 0, c->height, b1, b2))); }
+        };
         break;
       case TYPE_ICON: tft.drawBitmap(c->x, c->y, c->icon, c->width, c->height, c->color1); break;
       case TYPE_ITEM: renderItem(c); break;
@@ -350,7 +361,7 @@ void render(Control* c) {
       case TYPE_CANVAS:
         uint8_t x = c->x + (receiveBuffer[PPP_NDX_BLOCKINDEX_X] * CANVAS_BLOCK_SIZE); uint8_t y = c->y + (receiveBuffer[PPP_NDX_BLOCKINDEX_Y] * CANVAS_BLOCK_SIZE); //calculate position
         uint8_t z = PPP_NDX_BLOCKDATA;
-        for (i = 0; i < CANVAS_BLOCK_SIZE; i++) { //unrolled loop
+        for (uint16_t i = 0; i < CANVAS_BLOCK_SIZE; i++) { //unrolled loop
           tft.drawPixel(x++, y, ((uint16_t)receiveBuffer[z++] << CHAR_BIT) + receiveBuffer[z++]);  //1
           tft.drawPixel(x++, y, ((uint16_t)receiveBuffer[z++] << CHAR_BIT) + receiveBuffer[z++]);  //2
           tft.drawPixel(x++, y, ((uint16_t)receiveBuffer[z++] << CHAR_BIT) + receiveBuffer[z++]);  //3
@@ -363,16 +374,15 @@ void render(Control* c) {
   } else if (c->type != TYPE_RECTANGLE) tft.fillRect(c->x, c->y, c->width, c->height, mainControl->color2);
 }
 
+
 void renderQueueAllChildren(Control* c) {
   Control* d = c->child;
   while (d != NULL)  {
     if (d->visible) { //add only visible objects
       if (d->type == TYPE_LIST) { //render children first in case of list as the list draws the rectangles around the (non-)selected items
-         renderQueueAllChildren(d); 
-         renderPipe.add(d);
+        renderQueueAllChildren(d); renderPipe.add(d);
       } else {
-        renderPipe.add(d);
-        renderQueueAllChildren(d); 
+        renderPipe.add(d); renderQueueAllChildren(d); 
       }
     }
     d = d->next; //get next child
@@ -445,7 +455,7 @@ void clickMenu(Control* control) {
 
 void sendUp() {
   if (!focusControl) return; //after start up do nothing
-  if (focusControl->type == TYPE_LIST) moveMenu(focusControl, false);
+  if (focusControl->type == TYPE_LIST) moveMenu(focusControl, false); else if (focusControl->events) if (focusControl->events->onClick) focusControl->events->onUp(focusControl);
 }
 
 void sendDown() {
@@ -453,12 +463,12 @@ void sendDown() {
     sendEnter(mainMenu);
     return;
   }
-  if (focusControl->type == TYPE_LIST) moveMenu(focusControl, true);
+  if (focusControl->type == TYPE_LIST) moveMenu(focusControl, true); else if (focusControl->events) if (focusControl->events->onClick) focusControl->events->onDown(focusControl);
 }
 
 void sendClick() {
   if (!focusControl) return; //after start up do nothing
-  if (focusControl->type == TYPE_LIST) clickMenu(focusControl);
+  if (focusControl->type == TYPE_LIST) clickMenu(focusControl); else if (focusControl->events) if (focusControl->events->onClick) focusControl->events->onClick(focusControl);
 }
 
 void sendEnter(Control* control) { 
@@ -467,6 +477,10 @@ void sendEnter(Control* control) {
 }
 
 void setStatus() { //render whatever is already in statusLabel->text
+  scrollPosition = 0;
+  scrollWidth = 0;
+  scrollEnd = millis() + ONE_SECOND;
+  statusLabel->x = 0; //back to original position
   renderPipe.add(statusBar); //background label needs to update
   renderPipe.add(statusLabel); //status label needs to update
 }
@@ -490,6 +504,14 @@ void loop() {
   if (rpiPoweringUp || blocked) waitAnimate();
   if (!readyForNewData) { Serial.print("<y>"); Serial.flush(); readyForNewData = true; } else if (readSerialData()) processReceiveBuffer(); //process serial data
   if (renderPipe.first) renderRenderPipe();
+  if (scrollWidth > H_SCROLL_MIN_SIZE) {
+    if (millis() > scrollEnd) {
+      if (scrollPosition + H_SCROLL > scrollWidth) scrollPosition = 0 /*reset*/; else scrollPosition += H_SCROLL;
+      renderPipe.add(scrollBackground);
+      renderPipe.add(scrollLabel);
+      scrollEnd = millis() + ONE_SECOND;
+    }
+  }
 }
 
 // GUI ACTIONS
@@ -575,6 +597,18 @@ void hidePlayer() {
     renderQueueAllChildren(mainControl);
     enterMenu(mainMenu);
   }
+}
+
+void clickPlayer(Control* control) { 
+  Serial.print(F("<K>")); Serial.flush();
+}
+
+void upPlayer(Control* control) { 
+  Serial.print(F("<T>")); Serial.flush();
+}
+
+void downPlayer(Control* control) { 
+  Serial.print(F("<t>")); Serial.flush();
 }
 
 bool readSerialData() {
