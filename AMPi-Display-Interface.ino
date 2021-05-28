@@ -46,7 +46,7 @@ const char TXT_STREAMER_IS_READY [] PROGMEM = "Streamer is ready";
 #define CHAR_BIT 8
 #define MAX_MESSAGE 150
 #define MAX_TEXT 35
-#define H_SCROLL_MIN_SIZE 158
+#define H_SCROLL_MIN_SIZE 160
 #define H_SCROLL 120
 #define FONT_SHIFT_DOWN 14
 #define CANVAS_BLOCK_SIZE 5
@@ -110,7 +110,7 @@ struct ControlList {
 #define PPP_NDX_COMMAND 0
 #define PPP_NDX_LENGTH 1
 #define PPP_NDX_DATA 2
-#define ONE_SECOND 1000
+#define THREE_SECONDS 3000
 #define FIFTEEN_SECONDS 15000
 #define PPP_T_NO_OPERATION 0x00
 #define PPP_T_POWER_ON_COMPLETE 0x50        //P   <P>
@@ -479,7 +479,7 @@ void sendEnter(Control* control) {
 void setStatus() { //render whatever is already in statusLabel->text
   scrollPosition = 0;
   scrollWidth = 0;
-  scrollEnd = millis() + ONE_SECOND;
+  scrollEnd = millis() + THREE_SECONDS;
   statusLabel->x = 0; //back to original position
   renderPipe.add(statusBar); //background label needs to update
   renderPipe.add(statusLabel); //status label needs to update
@@ -506,10 +506,10 @@ void loop() {
   if (renderPipe.first) renderRenderPipe();
   if (scrollWidth > H_SCROLL_MIN_SIZE) {
     if (millis() > scrollEnd) {
-      if (scrollPosition + H_SCROLL > scrollWidth) scrollPosition = 0 /*reset*/; else scrollPosition += H_SCROLL;
+      if (scrollPosition + H_SCROLL_MIN_SIZE > scrollWidth) scrollPosition = 0 /*reset*/; else scrollPosition += H_SCROLL;
       renderPipe.add(scrollBackground);
       renderPipe.add(scrollLabel);
-      scrollEnd = millis() + ONE_SECOND;
+      scrollEnd = millis() + THREE_SECONDS;
     }
   }
 }
