@@ -45,7 +45,7 @@ const char TXT_STREAMER_IS_READY [] PROGMEM = "Streamer is ready";
 #define SERIAL_BAUD_RATE 115200
 #define CHAR_BIT 8
 #define MAX_MESSAGE 150
-#define MAX_TEXT 35
+#define MAX_TEXT 100
 #define H_SCROLL_MIN_SIZE 160
 #define H_SCROLL 120
 #define FONT_SHIFT_DOWN 14
@@ -90,7 +90,7 @@ struct ControlList {
   void add(Control* c) {
     ControlNode* node = first; //start checking if the control is already added
     while (node) {
-      //disabled for now if (node->control == c) return; //found! stop looking and don't add
+      if (node->control == c) return; //found! stop looking and don't add again
       node = node->next;
     }
     //not found! create node & add it to list
@@ -668,7 +668,8 @@ void processReceiveBuffer() {
       break;
       
     case PPP_T_STATUS_TEXT:
-      receiveBuffer[PPP_NDX_LENGTH+size_+1] = 0; //terminate with zero byte
+      receiveBuffer[PPP_NDX_LENGTH+size_+1] = 0; //terminate with zero byte - actual size
+      receiveBuffer[PPP_NDX_LENGTH+MAX_TEXT] = 0; //terminate with zero byte - max size
       strcpy(statusLabel->text, (char*)&receiveBuffer[2]); setStatus();
       break;
 
