@@ -8,6 +8,7 @@ This repository is the code for the Arduino Nano. For the software and code runn
 
 First prototype (WIP) with Raspberry Pi Model 3 and an Arduino Nano
 
+
 ![Front Side (first prototype)](https://raw.githubusercontent.com/bjaan/AMPi-Display-Interface/main/firstprototype-top.jpg)
 
 # AMPi features
@@ -23,6 +24,10 @@ First prototype (WIP) with Raspberry Pi Model 3 and an Arduino Nano
 * AirPlay playback using [Shairport Sync](https://github.com/mikebrady/shairport-sync). AMPi identifies itself as a AirPlay network player, where your iPhone or iTunes on a Mac can be connected to, to play music.  You can also use iTunes on Windows 10 to play music through AirPlay or route your audio to AMPi using [TuneBlade](http://www.tuneblade.com/)
 * Bluetooth 4.2 Playback, this overrides everything and directly accessible after power-up
 * Pandora.com music player (WIP), using [Pianobar](https://github.com/PromyLOPh/pianobar)
+
+Front panel design (WIP):
+
+![Panel Design (WIP)](https://raw.githubusercontent.com/bjaan/AMPi-Display-Interface/main/firstprototype-panel.jpg)
 
 # TODO / WIP
 
