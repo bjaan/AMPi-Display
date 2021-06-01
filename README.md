@@ -125,7 +125,7 @@ Serial Monitor > 9600 baud
 * [AZ-Delivery Arduino Nano](https://www.az-delivery.de/en/products/nano-v3-mit-ftdi-arduino-kompatibel)
 * [Thick Micro USB Cable to power the Raspberry PI 3](https://www.aliexpress.com/item/33027891253.html)
 * [Micro SD Card extension cable](https://www.aliexpress.com/item/4000405842609.html)
-* 24V USB Car Charger - to power the Raspberry PI, I cannabilized the one that came with a PSVITA
+* 24V USB Car Charger - to power the Raspberry PI, I cannibalized the one that came with a PSVITA
 * 3mm thick aluminum plate to cut to size
 * [100-240V Switching Power Supply 24V](https://www.amazon.de/gp/product/B01H5MK3OI/)
 * [KY-019 5V One 1 Channel Relay Module Board Shield For PIC AVR DSP ARM Arduino](https://www.aliexpress.com/item/1005001651126303.html) - to control power to the USB Car Charger power the Raspberry Pi
