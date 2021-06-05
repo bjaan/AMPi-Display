@@ -26,9 +26,10 @@ First prototype (WIP) with Raspberry Pi Model 3 and an Arduino Nano
 * Bluetooth 4.2 Playback, this overrides everything and directly accessible after power-up
 * Pandora.com music player (WIP), using [Pianobar](https://github.com/PromyLOPh/pianobar)
 
-Front panel design (WIP):
+Front and back panel design (WIP):
 
 ![Panel Design (WIP)](https://raw.githubusercontent.com/bjaan/AMPi-Display-Interface/main/firstprototype-panel.jpg)
+![PBackanel Design (WIP)](https://raw.githubusercontent.com/bjaan/AMPi-Display-Interface/main/firstprototype-backpanel.jpg)
 
 # TODO / WIP
 
@@ -127,7 +128,7 @@ Serial Monitor > 9600 baud
 * [Micro SD Card extension cable](https://www.aliexpress.com/item/4000405842609.html)
 * 24V USB Car Charger - to power the Raspberry PI, I cannibalized the one that came with a PSVITA
 * 3mm thick aluminum plate to cut to size
-* [100-240V Switching Power Supply 24V](https://www.amazon.de/gp/product/B01H5MK3OI/)
+* [100-240V Switching Power Supply 24V](https://www.amazon.de/-/en/AC-DC-Switching-Power-Supply-100-240V/dp/B074FSTPMT)
 * [KY-019 5V One 1 Channel Relay Module Board Shield For PIC AVR DSP ARM Arduino](https://www.aliexpress.com/item/1005001651126303.html) - to control power to the USB Car Charger power the Raspberry Pi
 * [Speaker Terminals](https://www.amazon.de/gp/product/B000L0ZMWK)
 * Electric (braided) wire to connect speaker terminals and mains electricity
