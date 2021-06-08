@@ -73,7 +73,7 @@ struct Control {
     this->type = type;
     this->parent = parent;
     if (type != TYPE_RECTANGLE) { color1 = ST7735_WHITE; color2 = ST7735_BLACK; } else { color1 = ST7735_BLACK; color2 = ST7735_BLACK; }
-    if (maxText) text = (char*)malloc(MAX_TEXT); else if (text_P) text = (char*)malloc(1+strlen_P(text_P)); //set dynamic text will use MAX_TEXT size instead of needed bytes for fixed label
+    if (maxText) text = (char*)malloc(MAX_TEXT+1); else if (text_P) text = (char*)malloc(1+strlen_P(text_P)); //set dynamic text will use MAX_TEXT size instead of needed bytes for fixed label
     if (text_P) strcpy_P(text, text_P); else if (text) text[0] = 0; //optionally with initial text_P text from PROGMEM
   };
   void setText(const char* text_P) {
@@ -81,6 +81,10 @@ struct Control {
     if (text_P) strcpy_P(text, text_P); else text[0] = 0;
   }
   void clearText() { setText(NULL); }
+  
+  ~Control() {
+    delete[] text;
+  }
 };
 
 struct ControlNode { Control* control; ControlNode* next; };
@@ -100,6 +104,22 @@ struct ControlList {
     if (!first) first = node;
     if (last) last->next = node;
     last = node;
+  }
+};
+
+struct MenuItem {
+  char* text = NULL;
+  Event onClick;
+  MenuItem* next;
+
+  MenuItem(MenuItem* previous, const char* text_P = NULL, bool maxText = false) {
+    if (previous) previous->next = this;
+    if (maxText) text = (char*)malloc(MAX_TEXT); else if (text_P) text = (char*)malloc(1+strlen_P(text_P)); //set dynamic text will use MAX_TEXT size instead of needed bytes for fixed label
+    if (text_P) strcpy_P(text, text_P); else if (text) text[0] = 0; //optionally with initial text_P text from PROGMEM
+  }
+
+  ~MenuItem() {
+    delete[] text;
   }
 };
 
@@ -156,7 +176,7 @@ Control* focusControl; Control* scrollLabel; Control* scrollBackground;
 Control* statusBar; Control* statusLabel;
 Control* rpiPowerIcon; Control* airplayIcon; Control* pandoraIcon; Control* appleMusicIcon; Control* chromeCastIcon;
 Control* mainMenu; Control* rpiPowerItem;
-Control* popupControl; Control* popupLabel1; Control* popupConfirmMenu;
+Control* popupControl; Control* popupLabel1; Control* popupMenu;
 Control* playerControl; Control* blockCanvas;
 
 // INITIALIZATION
@@ -190,7 +210,7 @@ void setup(void) {
   topbar->color1 = COLOR_BLUE; topbar->color2 = ST7735_BLACK;
 
   Control* ampiLabelMain = new Control(TYPE_LABEL, mainControl, TXT_AMPI); //size x=y=0 to hide background
-  ampiLabelMain->x = 3; ampiLabelMain->y = 3;
+  ampiLabelMain->x = 4; ampiLabelMain->y = 3;
   ampiLabelMain->color1 = COLOR_RED; ampiLabelMain->color2 = ST7735_BLACK;
 
   statusBar = new Control(TYPE_RECTANGLE, mainControl);
@@ -255,24 +275,12 @@ void setup(void) {
   popupLabel1->x = 5; popupLabel1->y = 10;
   popupLabel1->color1 = ST7735_WHITE;
 
-  popupConfirmMenu = new Control(TYPE_LIST, popupControl);
-  popupConfirmMenu->x = 5; popupConfirmMenu->y = 35; popupConfirmMenu->width = 150; popupConfirmMenu->height = 52 /*2*2+2*25*/;
-  popupConfirmMenu->color1 = ST7735_WHITE; popupConfirmMenu->color2 = ST7735_BLACK;
-  popupConfirmMenu->events = new Events(); popupConfirmMenu->events->onEnter = enterMenu;
+  popupMenu = new Control(TYPE_LIST, popupControl);
+  popupMenu->x = 5; popupMenu->y = 35; popupMenu->width = 150; popupMenu->height = 52 /*2*2+2*25*/;
+  popupMenu->color1 = ST7735_WHITE; popupMenu->color2 = ST7735_BLACK;
+  popupMenu->events = new Events(); popupMenu->events->onEnter = enterMenu;
  
-  Control* popupConfirmYesItem = new Control(TYPE_ITEM, popupConfirmMenu, TXT_YES);
-  popupConfirmYesItem->width = popupConfirmMenu->width; popupConfirmYesItem->height = 25; popupConfirmYesItem->x = 1;
-  popupConfirmYesItem->color1 = ST7735_BLACK; popupConfirmYesItem->color2 = COLOR_RED;
-  popupConfirmYesItem->events = new Events(); popupConfirmYesItem->events->onClick = closePopupAndSwithRpiPower;
-
-  Control* popupConfirmNoItem = new Control(TYPE_ITEM, popupConfirmMenu, TXT_NO_DONT);
-  popupConfirmNoItem->width = popupConfirmMenu->width; popupConfirmNoItem->height = 25; popupConfirmNoItem->x = 1; popupConfirmNoItem->y = 26;
-  popupConfirmNoItem->color1 = ST7735_BLACK; popupConfirmNoItem->color2 = COLOR_RED;
-  popupConfirmNoItem->events = new Events();  popupConfirmNoItem->events->onClick = closePopup;
-  
-  popupConfirmMenu->child = popupConfirmYesItem; popupConfirmYesItem->next = popupConfirmNoItem;
-
-  popupControl->child = popupLabel1; popupLabel1->next = popupConfirmMenu; //popupConfirmMenu->next = null;
+  popupControl->child = popupLabel1; popupLabel1->next = popupMenu; //popupMenu->next = null;
   
   //build player gui
   playerControl = new Control(TYPE_RECTANGLE, mainControl);
@@ -335,6 +343,9 @@ void renderItem(Control* item)
 }
 
 void render(Control* c) {
+  Serial.print("RT ");
+  Serial.print(c->type);
+  Serial.print("\n");
   if (c->visible) {
     switch (c->type) {
       case TYPE_MAIN: tft.fillScreen(c->color2); break;
@@ -564,16 +575,54 @@ void closePopupAndSwithRpiPower(Control* control) {
   swithRpiPower(rpiPowerItem);
 }
 
+void showPopupMenu (MenuItem* firstMenuItem) {
+  //remove existing menu items
+  Control* existingControl = popupMenu->child;
+  while (existingControl) {
+    Control* next = existingControl->next;
+    delete existingControl;
+    existingControl = next;
+  }
+  popupMenu->child = NULL;
+  //add new ones
+  Control* popupConfirmYesItem = new Control(TYPE_ITEM, popupMenu, TXT_YES);
+  popupConfirmYesItem->width = popupMenu->width; popupConfirmYesItem->height = 25; popupConfirmYesItem->x = 1;
+  popupConfirmYesItem->color1 = ST7735_BLACK; popupConfirmYesItem->color2 = COLOR_RED;
+  popupConfirmYesItem->events = new Events(); popupConfirmYesItem->events->onClick = closePopupAndSwithRpiPower;
+
+  Control* popupConfirmNoItem = new Control(TYPE_ITEM, popupMenu, TXT_NO_DONT);
+  popupConfirmNoItem->width = popupMenu->width; popupConfirmNoItem->height = 25; popupConfirmNoItem->x = 1; popupConfirmNoItem->y = 26;
+  popupConfirmNoItem->color1 = ST7735_BLACK; popupConfirmNoItem->color2 = COLOR_RED;
+  popupConfirmNoItem->events = new Events();  popupConfirmNoItem->events->onClick = closePopup;
+  
+  popupMenu->child = popupConfirmYesItem; popupConfirmYesItem->next = popupConfirmNoItem;
+
+  popupControl->visible = true; 
+  renderPipe.add(popupControl); renderQueueAllChildren(popupControl);
+  sendEnter(popupMenu);
+/*
+  //delete input parameters - as this function is set and forget
+  MenuItem* existingMenuItem = firstMenuItem;
+  while (existingMenuItem) {
+    MenuItem* next = existingMenuItem->next;
+    delete existingMenuItem;
+    existingMenuItem = next;
+  }*/
+}
+
 void switchPandora(Control* control) { 
   if (rpiPower && !rpiPoweringUp) {
     Serial.print("<N>"); Serial.flush();
   } else {
-    popupControl->visible = true; 
+    MenuItem* yesItem = new MenuItem(NULL, TXT_YES, false);
+    yesItem->onClick = closePopupAndSwithRpiPower;
+    MenuItem* noItem = new MenuItem(yesItem, TXT_NO_DONT, false);
+    noItem->onClick = closePopup;
+
     popupLabel1->setText(TXT_TURN_ON_NOW);
     statusLabel->setText(TXT_TURN_STREAMER_ON2); 
     setStatus();
-    renderPipe.add(popupControl); renderQueueAllChildren(popupControl);
-    sendEnter(popupConfirmMenu);
+    showPopupMenu(yesItem);
   }
 }
 
@@ -581,12 +630,15 @@ void switchAppleMusic(Control* control) {
   if (rpiPower && !rpiPoweringUp) {
     Serial.print(F("<L>")); Serial.flush();
   } else {
-    popupControl->visible = true; 
+    MenuItem* yesItem = new MenuItem(NULL, TXT_YES, false);
+    yesItem->onClick = closePopupAndSwithRpiPower;
+    MenuItem* noItem = new MenuItem(yesItem, TXT_NO_DONT, false);
+    noItem->onClick = closePopup;
+
     popupLabel1->setText(TXT_TURN_ON_NOW);
     statusLabel->setText(TXT_TURN_STREAMER_ON2); 
     setStatus();
-    renderPipe.add(popupControl); renderQueueAllChildren(popupControl);
-    sendEnter(popupConfirmMenu);
+    showPopupMenu(yesItem);
   }
 }
 
