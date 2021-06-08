@@ -190,7 +190,7 @@ void setup(void) {
   topbar->color1 = COLOR_BLUE; topbar->color2 = ST7735_BLACK;
 
   Control* ampiLabelMain = new Control(TYPE_LABEL, mainControl, TXT_AMPI); //size x=y=0 to hide background
-  ampiLabelMain->x = 3; ampiLabelMain->y = 3;
+  ampiLabelMain->x = 4; ampiLabelMain->y = 3;
   ampiLabelMain->color1 = COLOR_RED; ampiLabelMain->color2 = ST7735_BLACK;
 
   statusBar = new Control(TYPE_RECTANGLE, mainControl);
