@@ -73,11 +73,11 @@ struct Control {
     this->type = type;
     this->parent = parent;
     if (type != TYPE_RECTANGLE) { color1 = ST7735_WHITE; color2 = ST7735_BLACK; } else { color1 = ST7735_BLACK; color2 = ST7735_BLACK; }
-    if (maxText) text = (char*)malloc(MAX_TEXT+1); else if (text_P) text = (char*)malloc(1+strlen_P(text_P)); //set dynamic text will use MAX_TEXT size instead of needed bytes for fixed label
+    if (maxText) text = new char[MAX_TEXT+1](); else if (text_P) text = new char[1+strlen_P(text_P)]; //set dynamic text will use MAX_TEXT size instead of needed bytes for fixed label
     if (text_P) strcpy_P(text, text_P); else if (text) text[0] = 0; //optionally with initial text_P text from PROGMEM
   };
   void setText(const char* text_P) {
-    if (!text) text = (char*)malloc(MAX_TEXT); //just when we did not initialize by mistake - unnecessary when code is well written, i.e. not setting text when not initialized
+    if (!text) text = new char[MAX_TEXT](); //just when we did not initialize by mistake - unnecessary when code is well written, i.e. not setting text when not initialized
     if (text_P) strcpy_P(text, text_P); else text[0] = 0;
   }
   void clearText() { setText(NULL); }
@@ -98,7 +98,7 @@ struct ControlList {
       node = node->next;
     }
     //not found! create node & add it to list
-    node = (ControlNode*)malloc(sizeof(ControlNode));
+    node = new ControlNode();
     node->control = c;
     node->next = NULL;
     if (!first) first = node;
@@ -114,7 +114,7 @@ struct MenuItem {
 
   MenuItem(MenuItem* previous, const char* text_P = NULL, bool maxText = false) {
     if (previous) previous->next = this;
-    if (maxText) text = (char*)malloc(MAX_TEXT); else if (text_P) text = (char*)malloc(1+strlen_P(text_P)); //set dynamic text will use MAX_TEXT size instead of needed bytes for fixed label
+    if (maxText) text = new char[MAX_TEXT](); else if (text_P) text = new char[1+strlen_P(text_P)](); //set dynamic text will use MAX_TEXT size instead of needed bytes for fixed label
     if (text_P) strcpy_P(text, text_P); else if (text) text[0] = 0; //optionally with initial text_P text from PROGMEM
   }
 
