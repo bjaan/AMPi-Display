@@ -17,13 +17,14 @@ First prototype (WIP) with Raspberry Pi Model 3 and an Arduino Nano
 * 2 channels x 100W (Stereo) Class D Audio Amplifier
 * Built-in internet audio streaming device with high-quality Digital-to-Analog Converter (DAC), e.g. 192KHz/24-bit FLAC
 * Built-in pre-amplifier
-* Input audio transformers functioning as a ground loop isolator. This allows for a full galvanic separation between external audio equipment and the DAC and AMPi
+* Input audio transformers functioning as a ground loop isolator. This allows for a full galvanic separation between external audio equipment and the DAC, and the amplifier section
 * Computer-controlled interface that controls the screen, manages the power of and the services running on the built-in audio streaming device
 * 3 switchable external analog audio input channels using a relay array through a rotary switch
 * Audio level indicator
 * Built-in mains power supply (100-230V)
 * AirPlay playback using [Shairport Sync](https://github.com/mikebrady/shairport-sync). AMPi identifies itself as a AirPlay network player, where your iPhone or iTunes on a Mac can be connected to, to play music.  You can also use iTunes on Windows 10 to play music through AirPlay or route your audio to AMPi using [TuneBlade](http://www.tuneblade.com/)
 * Bluetooth 4.2 Playback, this overrides everything and directly accessible after power-up
+* Quiet & high-quality upsampled to 192kHz/16bit Audio CD playback through generic USB CD/DVD drive (WIP). Breaths new life into the Audio CD format!
 * Pandora.com music player (WIP), using [Pianobar](https://github.com/PromyLOPh/pianobar)
 
 Front and back panel design (WIP):
@@ -75,7 +76,9 @@ mains --- power supply +--- 24V --- DC/DC Converter +--- 12V --- Audio level ind
                        |                                                         |                        +--- 3.3V --- Serial
                        |                                                         +--- 5V --- Power Relay for Raspberry Pi
                        |
-                       +--- 24V --- open/closed Power Relay for Raspberry PI --- 24V --- USB Charger --- 5V --- Raspberry Pi -- 5V -- DAC
+                       +--- 24V --- open/closed Power Relay for Raspberry PI --- 24V --- USB Charger --- 5V --- Raspberry Pi -- 5V +--- DAC
+                       |                                                                                                           |
+                       |                                                                                                           +--- USB --- CD/DVD/Blu-ray drive
                        |
                        +--- 24V --- AMP Board
 ```
@@ -109,6 +112,8 @@ Serial Monitor > 9600 baud
 
 ## Installed libraries
 
+These libraries were installed through Arduino IDE's _Tools > Manage Libraries..._ menu:
+
 * [Adafruit GFX Library](https://github.com/adafruit/Adafruit-GFX-Library)
 * [Adafruit ST7735 Library](https://github.com/adafruit/Adafruit-ST7735-Library)
 * [Matthias Hertel's Rotary Encoder libary](https://github.com/mathertel/RotaryEncoder)
@@ -118,15 +123,15 @@ Serial Monitor > 9600 baud
 * [Douk Audio / Nobsound Bluetooth 4.2 TPA3116 Mini Digital Power Amplifier Board 100W*2](https://www.aliexpress.com/item/33012752276.html) ([link 2](https://www.aliexpress.com/item/33014190005.html)) - this board uses 2 TPA3116 chips one for each channel, hence it's more powerful.  It also implements two NE5532 Opamps as pre-amplifiers. 
 * [AZ-Delivery 1.77 inch SPI TFT display and 128x160 pixels for Arduino](https://www.az-delivery.de/en/products/1-77-zoll-spi-tft-display)
 * [Audio Relay Switcher, modified to accept 5V](https://www.aliexpress.com/item/4000715642555.html) - essentially did not implement the voltage regulator as the LEDs & relays need 5V
-* Raspberry Pi, I used Model 3
-* [Nickel Alloy Audio Transformers 600:600 Ohm](https://www.aliexpress.com/item/32827431499.html) - I needed two; one for each audio channel
+* Raspberry Pi, we used a Model 3
+* [Nickel Alloy Audio Transformers 600:600 Ohm](https://www.aliexpress.com/item/32827431499.html) - We needed two; one for each audio channel
 * [24 LED Stereo VU Meter](https://www.aliexpress.com/item/4000136566150.html)
-* [3.3V/5V level-shifter](https://www.amazon.de/-/en/gp/product/B07LG6RK7L) to protect the Raspberry Pi & Display - I needed two
-* [DC/DC Downward Converter 3.0-40 V to 1.5-35 V Power Supply Down Control Module](https://www.amazon.de/-/en/ARCELI-6PCS-LM2596-Downward-Converter/dp/B07MY2NTFV/), I used 2 - one for the VU meter requiring 12V, second one brings the voltage down to 5V for the Arduino powering the display as well 
+* [3.3V/5V level-shifter](https://www.amazon.de/-/en/gp/product/B07LG6RK7L) to protect the Raspberry Pi & Display - We needed two
+* [DC/DC Downward Converter 3.0-40 V to 1.5-35 V Power Supply Down Control Module](https://www.amazon.de/-/en/ARCELI-6PCS-LM2596-Downward-Converter/dp/B07MY2NTFV/), We used 2 - one for the VU meter requiring 12V, second one brings the voltage down to 5V for the Arduino powering the display as well 
 * [AZ-Delivery Arduino Nano](https://www.az-delivery.de/en/products/nano-v3-mit-ftdi-arduino-kompatibel)
 * [Thick Micro USB Cable to power the Raspberry PI 3](https://www.aliexpress.com/item/33027891253.html)
 * [Micro SD Card extension cable](https://www.aliexpress.com/item/4000405842609.html)
-* 24V USB Car Charger - to power the Raspberry PI, I cannibalized the one that came with a PSVITA
+* 24V USB Car Charger - to power the Raspberry PI, we cannibalized the one that came with a PSVITA
 * 3mm thick aluminum plate to cut to size
 * [100-240V Switching Power Supply 24V](https://www.amazon.de/-/en/AC-DC-Switching-Power-Supply-100-240V/dp/B074FSTPMT)
 * [KY-019 5V One 1 Channel Relay Module Board Shield For PIC AVR DSP ARM Arduino](https://www.aliexpress.com/item/1005001651126303.html) - to control power to the USB Car Charger power the Raspberry Pi
@@ -146,7 +151,7 @@ Serial Monitor > 9600 baud
 * [Fabric Adhesive Tape](https://www.aliexpress.com/item/4000235805659.html)
 * [Kapton Tape](https://www.aliexpress.com/item/4001221342106.html)
 * Hot glue (sorry, not sorry) to hold the VU-meter and Micro-SD Card Holder *strongly* in place, later rework required
-* Speakers - I used a pair of repaired German 3-way HECO/Summit/Hans G. Hennel speakers marked "Hifi-Stereo-Box LX90" from the 70's or early 80's (SUMMIT brand is on the crossover print only, no external brand name is left) with these specifications: "60/90W 22..20000Hz 4 Ohm"
+* Speakers - we used a pair of repaired German 3-way HECO/Summit/Hans G. Hennel speakers marked "Hifi-Stereo-Box LX90" from the 70's or early 80's (SUMMIT brand is on the crossover print only, no external brand name is left) with these specifications: "60/90W 22..20000Hz 4 Ohm"
 
 ![Back Side (first prototype)](https://raw.githubusercontent.com/bjaan/AMPi-Display-Interface/main/firstprototype-back.jpg)
 
