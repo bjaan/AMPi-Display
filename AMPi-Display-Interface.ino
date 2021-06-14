@@ -83,6 +83,8 @@ struct Control {
   void clearText() { setText(NULL); }
   
   ~Control() {
+    if (child) delete child;
+    if (next) delete next;
     delete[] text;
   }
 };
@@ -119,6 +121,7 @@ struct MenuItem {
   }
 
   ~MenuItem() {
+    if (next) delete next;
     delete[] text;
   }
 };
@@ -322,7 +325,6 @@ void renderText(char* text, uint8_t x, uint8_t y, uint8_t width, uint8_t height,
     tft.setTextColor(color1);
     tft.print(text);
   }
-  
 }
 
 void renderItem(Control* item)
@@ -343,9 +345,6 @@ void renderItem(Control* item)
 }
 
 void render(Control* c) {
-  Serial.print("RT ");
-  Serial.print(c->type);
-  Serial.print("\n");
   if (c->visible) {
     switch (c->type) {
       case TYPE_MAIN: tft.fillScreen(c->color2); break;
@@ -577,12 +576,7 @@ void closePopupAndSwithRpiPower(Control* control) {
 
 void showPopupMenu (MenuItem* firstMenuItem) {
   //remove existing menu items
-  Control* existingControl = popupMenu->child;
-  while (existingControl) {
-    Control* next = existingControl->next;
-    delete existingControl;
-    existingControl = next;
-  }
+  if (popupMenu->child) delete popupMenu->child;
   popupMenu->child = NULL;
   //add new ones
   Control* popupConfirmYesItem = new Control(TYPE_ITEM, popupMenu, TXT_YES);
@@ -600,14 +594,6 @@ void showPopupMenu (MenuItem* firstMenuItem) {
   popupControl->visible = true; 
   renderPipe.add(popupControl); renderQueueAllChildren(popupControl);
   sendEnter(popupMenu);
-/*
-  //delete input parameters - as this function is set and forget
-  MenuItem* existingMenuItem = firstMenuItem;
-  while (existingMenuItem) {
-    MenuItem* next = existingMenuItem->next;
-    delete existingMenuItem;
-    existingMenuItem = next;
-  }*/
 }
 
 void switchPandora(Control* control) { 
