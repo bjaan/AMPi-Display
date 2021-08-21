@@ -27,7 +27,7 @@ First prototype (WIP) with Raspberry Pi Model 3 and an Arduino Nano
 * Quiet & high-quality upsampled to 192kHz/16bit Audio CD playback through generic USB CD/DVD drive (WIP). Breaths new life into the Audio CD format!
 * Pandora.com music player (WIP), using [Pianobar](https://github.com/PromyLOPh/pianobar)
 
-Front and back panel design (WIP):
+Front and back panel design (available in the .xcf and .docx documents):
 
 ![Panel Design (WIP)](https://raw.githubusercontent.com/bjaan/AMPi-Display-Interface/main/firstprototype-panel.jpg)
 ![PBackanel Design (WIP)](https://raw.githubusercontent.com/bjaan/AMPi-Display-Interface/main/firstprototype-backpanel.jpg)
