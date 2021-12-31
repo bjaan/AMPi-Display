@@ -1,9 +1,9 @@
 //ICONS - tool to create at http://javl.github.io/image2cpp/ - use 16x16 monochrome images & set white background & set use invert image colors & set plain bytes & set Horizontal 1 byte per pixel draw mode
 const unsigned char IMG_POWER [] PROGMEM = { 0x01, 0x80, 0x01, 0x80, 0x01, 0x80, 0x0d, 0xb0, 0x1d, 0xb8, 0x39, 0x9c, 0x31, 0x8e, 0x60, 0x06, 0x60, 0x06, 0x60, 0x06, 0x60, 0x06, 0x30, 0x0c, 0x38, 0x1c, 0x1c, 0x38, 0x0f, 0xf0, 0x03, 0xc0 };
 const unsigned char IMG_AIRPLAY [] PROGMEM = { 0x07, 0xe0, 0x08, 0x10, 0x30, 0x0c, 0x43, 0xc2, 0x44, 0x22, 0x49, 0x92, 0x92, 0x49, 0x94, 0x29, 0x94, 0x29, 0x94, 0x29, 0x90, 0x09, 0x49, 0x92, 0x43, 0xc2, 0x27, 0xe4, 0x0f, 0xf0, 0x0f, 0xf0 };
-const unsigned char iMG_CHROMECAST_AUDIO [] PROGMEM = { 0x0f, 0xf8, 0x1f, 0xfc, 0x1e, 0x3c, 0x1e, 0x3c, 0x1f, 0x7c, 0x1f, 0xfc, 0x1c, 0x1c, 0x18, 0x0c, 0x11, 0xc4, 0x13, 0xe4, 0x00, 0xe4, 0x1e, 0x64, 0x03, 0x44, 0x19, 0x0c, 0x05, 0x78, 0x15, 0x00 };
+//const unsigned char iMG_CHROMECAST_AUDIO [] PROGMEM = { 0x0f, 0xf8, 0x1f, 0xfc, 0x1e, 0x3c, 0x1e, 0x3c, 0x1f, 0x7c, 0x1f, 0xfc, 0x1c, 0x1c, 0x18, 0x0c, 0x11, 0xc4, 0x13, 0xe4, 0x00, 0xe4, 0x1e, 0x64, 0x03, 0x44, 0x19, 0x0c, 0x05, 0x78, 0x15, 0x00 };
 const unsigned char IMG_PANDORA_MUSIC [] PROGMEM = { 0x7f, 0xf0, 0x40, 0x08, 0x40, 0x04, 0x40, 0x02, 0x40, 0x02, 0x40, 0x02, 0x40, 0x02, 0x40, 0x02, 0x40, 0x02, 0x40, 0x04, 0x40, 0x08, 0x47, 0xf0, 0x44, 0x00, 0x44, 0x00, 0x44, 0x00, 0x7c, 0x00 };
-const unsigned char IMG_APPLE_MUSIC [] PROGMEM = { 0x3f, 0xfc, 0x7f, 0xfe, 0xff, 0xc7, 0xfc, 0x07, 0xf8, 0x07, 0xf8, 0x27, 0xf9, 0xe7, 0xf9, 0xe7, 0xf9, 0xe7, 0xf9, 0xc7, 0xf1, 0x87, 0xe1, 0x87, 0xe1, 0xcf, 0xf3, 0xff, 0x7f, 0xfe, 0x3f, 0xfc };
+//const unsigned char IMG_APPLE_MUSIC [] PROGMEM = { 0x3f, 0xfc, 0x7f, 0xfe, 0xff, 0xc7, 0xfc, 0x07, 0xf8, 0x07, 0xf8, 0x27, 0xf9, 0xe7, 0xf9, 0xe7, 0xf9, 0xe7, 0xf9, 0xc7, 0xf1, 0x87, 0xe1, 0x87, 0xe1, 0xcf, 0xf3, 0xff, 0x7f, 0xfe, 0x3f, 0xfc };
 
 //TEXT
 const char TXT_TURN_STREAMER_ON [] PROGMEM = "Turn Streamer on";
@@ -55,7 +55,12 @@ const char TXT_STREAMER_IS_READY [] PROGMEM = "Streamer is ready";
 struct Control;
 
 typedef void (*Event) (Control* control);
-struct Events { Event onClick; Event onEnter; Event onUp; Event onDown; };
+struct Events {
+  Event onClick;
+  Event onEnter;
+  Event onUp;
+  Event onDown;
+};
 
 struct Control {
   uint8_t type;
@@ -72,18 +77,29 @@ struct Control {
   Control(byte type, Control* parent, const char* text_P = NULL, bool maxText = false) {
     this->type = type;
     this->parent = parent;
-    if (type != TYPE_RECTANGLE) { color1 = ST7735_WHITE; color2 = ST7735_BLACK; } else { color1 = ST7735_BLACK; color2 = ST7735_BLACK; }
-    if (maxText) text = (char*)malloc(MAX_TEXT); else if (text_P) text = (char*)malloc(1+strlen_P(text_P)); //set dynamic text will use MAX_TEXT size instead of needed bytes for fixed label
+    if (type != TYPE_RECTANGLE) {
+      color1 = ST7735_WHITE;
+      color2 = ST7735_BLACK;
+    } else {
+      color1 = ST7735_BLACK;
+      color2 = ST7735_BLACK;
+    }
+    if (maxText) text = (char*)malloc(MAX_TEXT); else if (text_P) text = (char*)malloc(1 + strlen_P(text_P)); //set dynamic text will use MAX_TEXT size instead of needed bytes for fixed label
     if (text_P) strcpy_P(text, text_P); else if (text) text[0] = 0; //optionally with initial text_P text from PROGMEM
   };
   void setText(const char* text_P) {
     if (!text) text = (char*)malloc(MAX_TEXT); //just when we did not initialize by mistake - unnecessary when code is well written, i.e. not setting text when not initialized
     if (text_P) strcpy_P(text, text_P); else text[0] = 0;
   }
-  void clearText() { setText(NULL); }
+  void clearText() {
+    setText(NULL);
+  }
 };
 
-struct ControlNode { Control* control; ControlNode* next; };
+struct ControlNode {
+  Control* control;
+  ControlNode* next;
+};
 struct ControlList {
   ControlNode* first = NULL;
   ControlNode* last = NULL;
@@ -110,6 +126,7 @@ struct ControlList {
 #define PPP_NDX_COMMAND 0
 #define PPP_NDX_LENGTH 1
 #define PPP_NDX_DATA 2
+#define ONE_SECOND 1000
 #define THREE_SECONDS 3000
 #define FIFTEEN_SECONDS 15000
 #define PPP_T_NO_OPERATION 0x00
@@ -151,10 +168,10 @@ bool blocked = false;
 unsigned long delayEnd = 0; unsigned long scrollEnd = 0;
 bool buttonDown = false;
 int encoderPosition = 0;
-Control* mainControl; 
+Control* mainControl;
 Control* focusControl; Control* scrollLabel; Control* scrollBackground;
 Control* statusBar; Control* statusLabel;
-Control* rpiPowerIcon; Control* airplayIcon; Control* pandoraIcon; Control* appleMusicIcon; Control* chromeCastIcon;
+Control* rpiPowerIcon; Control* airplayIcon; Control* pandoraIcon; //Control* appleMusicIcon; Control* chromeCastIcon;
 Control* mainMenu; Control* rpiPowerItem;
 Control* popupControl; Control* popupLabel1; Control* popupConfirmMenu;
 Control* playerControl; Control* blockCanvas;
@@ -166,10 +183,10 @@ void checkPosition() {
 }
 
 void setup(void) {
-  Serial.begin(SERIAL_BAUD_RATE); // open the serial port at 9600 bps:
- 
+  Serial.begin(SERIAL_BAUD_RATE); // open the serial port with given baud rate
+
   tft.initR(INITR_BLACKTAB); tft.setRotation(1); tft.setFont(&FreeSans9pt7b); tft.setTextWrap(false); //initialize display & set default font
- 
+
   //RPi Power
   pinMode(RPI_POWER, OUTPUT);    // sets the digital pin 2 as output
   digitalWrite(RPI_POWER, LOW); //off
@@ -184,7 +201,7 @@ void setup(void) {
   mainControl->color2 = ST7735_BLACK; //background color
 
   //initialize status bar
-  
+
   Control* topbar = new Control(TYPE_RECTANGLE, mainControl);
   topbar->x = 0; topbar->y = 0; topbar->width = 160; topbar->height = 13;
   topbar->color1 = COLOR_BLUE; topbar->color2 = ST7735_BLACK;
@@ -214,12 +231,12 @@ void setup(void) {
   rpiPowerItem->events = new Events(); rpiPowerItem->events->onClick = swithRpiPower;
 
   Control* pandoraItem = new Control(TYPE_ITEM, mainMenu, TXT_PANDORA_MUSIC);
-  pandoraItem->width = mainMenu->width; pandoraItem->height = 25; pandoraItem->x = 1; pandoraItem->y = 27  /*1*2+1*25*/; 
+  pandoraItem->width = mainMenu->width; pandoraItem->height = 25; pandoraItem->x = 1; pandoraItem->y = 27  /*1*2+1*25*/;
   pandoraItem->color1 = ST7735_BLACK; pandoraItem->color2 = COLOR_RED;
   pandoraItem->events = new Events(); pandoraItem->events->onClick = switchPandora;
 
   Control* appleItem = new Control(TYPE_ITEM, mainMenu, TXT_APPLE_MUSIC);
-  appleItem->width = mainMenu->width; appleItem->height = 25; appleItem->x = 1; appleItem->y = 54 /*2*2+2*25*/; 
+  appleItem->width = mainMenu->width; appleItem->height = 25; appleItem->x = 1; appleItem->y = 54 /*2*2+2*25*/;
   appleItem->color1 = ST7735_BLACK; appleItem->color2 = COLOR_RED;
   appleItem->events = new Events(); appleItem->events->onClick = switchAppleMusic;
 
@@ -235,15 +252,15 @@ void setup(void) {
   pandoraIcon->width = 16; pandoraIcon->height = 16; pandoraIcon->x = 86 /*3+45 (AMPi label width) +2+16 (icon width*2) +2*2 */; pandoraIcon->y = 3;
   pandoraIcon->color1 = COLOR_RED; pandoraIcon->icon = IMG_PANDORA_MUSIC;
 
-  appleMusicIcon = new Control(TYPE_ICON, mainControl);
-  appleMusicIcon->width = 16; appleMusicIcon->height = 16; appleMusicIcon->x = 104 /*3+45 (AMPi label width) +2+16 (icon width*3) +2*3 */; appleMusicIcon->y = 3;
-  appleMusicIcon->color1 = COLOR_RED; appleMusicIcon->icon = IMG_APPLE_MUSIC;
- 
-  chromeCastIcon = new Control(TYPE_ICON, mainControl);
-  chromeCastIcon->width = 16; chromeCastIcon->height = 16; chromeCastIcon->x = 120 /*3+45 (AMPi label width) +2+16 (icon width*4) +2*3 */; chromeCastIcon->y = 3;
-  chromeCastIcon->color1 = COLOR_RED; chromeCastIcon->icon = iMG_CHROMECAST_AUDIO;
+//  appleMusicIcon = new Control(TYPE_ICON, mainControl);
+//  appleMusicIcon->width = 16; appleMusicIcon->height = 16; appleMusicIcon->x = 104 /*3+45 (AMPi label width) +2+16 (icon width*3) +2*3 */; appleMusicIcon->y = 3;
+//  appleMusicIcon->color1 = COLOR_RED; appleMusicIcon->icon = IMG_APPLE_MUSIC;
+
+//  chromeCastIcon = new Control(TYPE_ICON, mainControl);
+//  chromeCastIcon->width = 16; chromeCastIcon->height = 16; chromeCastIcon->x = 120 /*3+45 (AMPi label width) +2+16 (icon width*4) +2*3 */; chromeCastIcon->y = 3;
+//  chromeCastIcon->color1 = COLOR_RED; chromeCastIcon->icon = iMG_CHROMECAST_AUDIO;
   //build main menu
-  mainMenu->child = rpiPowerItem; rpiPowerItem->next = pandoraItem; pandoraItem->next = appleItem; 
+  mainMenu->child = rpiPowerItem; rpiPowerItem->next = pandoraItem; pandoraItem->next = appleItem;
 
   //build popup GUI
   popupControl = new Control(TYPE_RECTANGLE, mainControl);
@@ -259,7 +276,7 @@ void setup(void) {
   popupConfirmMenu->x = 5; popupConfirmMenu->y = 35; popupConfirmMenu->width = 150; popupConfirmMenu->height = 52 /*2*2+2*25*/;
   popupConfirmMenu->color1 = ST7735_WHITE; popupConfirmMenu->color2 = ST7735_BLACK;
   popupConfirmMenu->events = new Events(); popupConfirmMenu->events->onEnter = enterMenu;
- 
+
   Control* popupConfirmYesItem = new Control(TYPE_ITEM, popupConfirmMenu, TXT_YES);
   popupConfirmYesItem->width = popupConfirmMenu->width; popupConfirmYesItem->height = 25; popupConfirmYesItem->x = 1;
   popupConfirmYesItem->color1 = ST7735_BLACK; popupConfirmYesItem->color2 = COLOR_RED;
@@ -269,11 +286,11 @@ void setup(void) {
   popupConfirmNoItem->width = popupConfirmMenu->width; popupConfirmNoItem->height = 25; popupConfirmNoItem->x = 1; popupConfirmNoItem->y = 26;
   popupConfirmNoItem->color1 = ST7735_BLACK; popupConfirmNoItem->color2 = COLOR_RED;
   popupConfirmNoItem->events = new Events();  popupConfirmNoItem->events->onClick = closePopup;
-  
+
   popupConfirmMenu->child = popupConfirmYesItem; popupConfirmYesItem->next = popupConfirmNoItem;
 
   popupControl->child = popupLabel1; popupLabel1->next = popupConfirmMenu; //popupConfirmMenu->next = null;
-  
+
   //build player gui
   playerControl = new Control(TYPE_RECTANGLE, mainControl);
   playerControl->x = 4; playerControl->y = 2; playerControl->width = 152; playerControl->height = 107;
@@ -287,7 +304,7 @@ void setup(void) {
   playerControl->child = blockCanvas; //blockCanvas->next = null;
 
   //connect main gui components
-  mainControl->child = topbar; topbar->next = ampiLabelMain; ampiLabelMain->next = statusBar; statusBar->next = statusLabel; statusLabel->next = mainMenu; mainMenu->next = rpiPowerIcon; rpiPowerIcon->next = airplayIcon; airplayIcon->next = pandoraIcon; pandoraIcon->next = appleMusicIcon; appleMusicIcon->next = chromeCastIcon; chromeCastIcon->next = popupControl; popupControl->next = playerControl; //playerControl->next = null  //build main GUI
+  mainControl->child = topbar; topbar->next = ampiLabelMain; ampiLabelMain->next = statusBar; statusBar->next = statusLabel; statusLabel->next = mainMenu; mainMenu->next = rpiPowerIcon; rpiPowerIcon->next = airplayIcon; airplayIcon->next = pandoraIcon; pandoraIcon->next = popupControl; /* pandoraIcon->next = appleMusicIcon; appleMusicIcon->next = chromeCastIcon; chromeCastIcon->next = popupControl; */ popupControl->next = playerControl; playerControl->next = NULL;  //build main GUI
 
   renderPipe.add(mainControl);
   renderQueueAllChildren(mainControl);
@@ -314,7 +331,7 @@ void renderText(char* text, uint8_t x, uint8_t y, uint8_t width, uint8_t height,
     tft.setTextColor(color1);
     tft.print(text);
   }
-  
+
 }
 
 void renderItem(Control* item)
@@ -330,7 +347,7 @@ void renderItem(Control* item)
   uint8_t textx = item->parent->x + item->x + item->x;
   uint8_t texty = item->parent->y + item->x + item->x + item->x + item->y;
   uint8_t textwidth = item->width - item->x - item->x - item->x - item->x;
-  uint8_t textheight = item->height - item->x - item->x - item->x - item->x; 
+  uint8_t textheight = item->height - item->x - item->x - item->x - item->x;
   renderText(item->text, textx, texty, textwidth, textheight, item->parent->color1, item->parent->color2, false);
 }
 
@@ -340,12 +357,14 @@ void render(Control* c) {
       case TYPE_MAIN: tft.fillScreen(c->color2); break;
       case TYPE_LABEL: renderText(c->text, c->x, c->y, c->width, c->height, c->color1, c->color2, c == scrollLabel); break;
       case TYPE_RECTANGLE: if (c->width > 0 && c->height > 0)
-        if (c->color1 == c->color2) tft.fillRect(c->x, c->y, c->width, c->height, c->color2);
-        else {
-          uint8_t r1, g1, b1; color565toRGB(c->color1, r1, g1, b1);
-          uint8_t r2, g2, b2; color565toRGB(c->color2, r1, g2, b2);
-          for (uint8_t i = 0; i < c->height; i++) { tft.drawFastHLine( c->x, c->y + i, c->width, tft.color565(map(i, 0, c->height, r1, r2), map(i, 0, c->height, g1, g2), map(i, 0, c->height, b1, b2))); }
-        };
+          if (c->color1 == c->color2) tft.fillRect(c->x, c->y, c->width, c->height, c->color2);
+          else {
+            uint8_t r1, g1, b1; color565toRGB(c->color1, r1, g1, b1);
+            uint8_t r2, g2, b2; color565toRGB(c->color2, r1, g2, b2);
+            for (uint8_t i = 0; i < c->height; i++) {
+              tft.drawFastHLine( c->x, c->y + i, c->width, tft.color565(map(i, 0, c->height, r1, r2), map(i, 0, c->height, g1, g2), map(i, 0, c->height, b1, b2)));
+            }
+          };
         break;
       case TYPE_ICON: tft.drawBitmap(c->x, c->y, c->icon, c->width, c->height, c->color1); break;
       case TYPE_ITEM: renderItem(c); break;
@@ -367,7 +386,7 @@ void render(Control* c) {
           tft.drawPixel(x++, y, ((uint16_t)receiveBuffer[z++] << CHAR_BIT) + receiveBuffer[z++]);  //3
           tft.drawPixel(x++, y, ((uint16_t)receiveBuffer[z++] << CHAR_BIT) + receiveBuffer[z++]);  //4
           tft.drawPixel(x++, y, ((uint16_t)receiveBuffer[z++] << CHAR_BIT) + receiveBuffer[z++]);  //5
-          y++; x-=CANVAS_BLOCK_SIZE;
+          y++; x -= CANVAS_BLOCK_SIZE;
         }
         break;
     }
@@ -382,7 +401,7 @@ void renderQueueAllChildren(Control* c) {
       if (d->type == TYPE_LIST) { //render children first in case of list as the list draws the rectangles around the (non-)selected items
         renderQueueAllChildren(d); renderPipe.add(d);
       } else {
-        renderPipe.add(d); renderQueueAllChildren(d); 
+        renderPipe.add(d); renderQueueAllChildren(d);
       }
     }
     d = d->next; //get next child
@@ -401,15 +420,24 @@ void renderRenderPipe() {
   renderPipe.first = NULL; renderPipe.last = NULL;
 }
 
-void color565toRGB(uint16_t color, uint8_t &r, uint8_t &g, uint8_t &b) { r = (color>>8)&0x00F8; g = (color>>3)&0x00FC; b = (color<<3)&0x00F8; } //converts 565 format 16 bit color to RGB https://github.com/PaulStoffregen/ILI9341_t3/pull/24/commits/7e3789680bd6ecee425edc3d60a2a973ff417ab8
-int readRGB88AndConvertRGB656(unsigned char * buffer, uint16_t index) { return tft.color565(buffer[index], buffer[index+1], buffer[index+2]); }
+void color565toRGB(uint16_t color, uint8_t &r, uint8_t &g, uint8_t &b) {
+  r = (color >> 8) & 0x00F8;  //converts 565 format 16 bit color to RGB https://github.com/PaulStoffregen/ILI9341_t3/pull/24/commits/7e3789680bd6ecee425edc3d60a2a973ff417ab8
+  g = (color >> 3) & 0x00FC;
+  b = (color << 3) & 0x00F8;
+}
+int readRGB888AndConvertRGB656(unsigned char * buffer, uint16_t index) {
+  return tft.color565(buffer[index], buffer[index + 1], buffer[index + 2]);
+}
 
 void enterMenu(Control* control) {
   if (focusControl) { //unselect current control & when TYPE_LIST unselect all items
     focusControl->selected = false;
     if (control->type == TYPE_LIST) {
       Control* c = control->child;
-      while (c) { c->selected = false; c = c->next; }
+      while (c) {
+        c->selected = false;
+        c = c->next;
+      }
     }
   }
   focusControl = control;
@@ -432,12 +460,26 @@ void moveMenu(Control* control, bool directionDown) {
       i++;
       item = item->next;
     }
-    if (directionDown == false) { if (s > 1) s--; else s = c; } else { if (s < c) s++; else s = 1; } //move according to direction
+    if (directionDown == false) {
+      if (s > 1) s--;  //move according to direction
+      else s = c;
+    } else {
+      if (s < c) s++;
+      else s = 1;
+    }
     item = control->child;
     i = 1;
     while (item) { //switch to other selection
-      if (i == s) { if (!item->selected) { item->selected = true; }}
-      else { if (item->selected) { item->selected = false; }}
+      if (i == s) {
+        if (!item->selected) {
+          item->selected = true;
+        }
+      }
+      else {
+        if (item->selected) {
+          item->selected = false;
+        }
+      }
       i++;
       item = item->next;
     }
@@ -446,11 +488,11 @@ void moveMenu(Control* control, bool directionDown) {
 }
 
 void clickMenu(Control* control) {
-    Control* item = control->child;
-    while (item) {
-        if (item->selected) if (item->events) if (item->events->onClick) item->events->onClick(item);
-        item = item->next;
-    }
+  Control* item = control->child;
+  while (item) {
+    if (item->selected) if (item->events) if (item->events->onClick) item->events->onClick(item);
+    item = item->next;
+  }
 }
 
 void sendUp() {
@@ -471,7 +513,7 @@ void sendClick() {
   if (focusControl->type == TYPE_LIST) clickMenu(focusControl); else if (focusControl->events) if (focusControl->events->onClick) focusControl->events->onClick(focusControl);
 }
 
-void sendEnter(Control* control) { 
+void sendEnter(Control* control) {
   focusControl = control;
   if (control->events) if (control->events->onEnter) control->events->onEnter(control);
 }
@@ -488,11 +530,12 @@ void setStatus() { //render whatever is already in statusLabel->text
 // MAIN LOOP
 
 void loop() {
+  unsigned long ms = millis();
   encoder.tick();
   if (!rpiPoweringDown && !rpiPoweringUp) { //normal operation as Raspberry Pi is not powering down or up
     int newPos = encoder.getPosition();
     if (encoderPosition != newPos) {
-      if (encoderPosition % 2 == 0) if (encoderPosition < newPos) sendUp(); else sendDown();
+        if (encoderPosition % 2 == 0) if (encoderPosition < newPos) sendUp(); else sendDown();
       encoderPosition = newPos;
     }
     int btnState = digitalRead(ROTENC_SW); //read the button state
@@ -500,16 +543,24 @@ void loop() {
       if (!buttonDown) sendClick();
       buttonDown = true;
     } else buttonDown = false;
-  } else if (rpiPoweringDown && millis() > delayEnd) rpiPowerOff(); //as the Raspberry Pi powering down we need to wait it out (fixed timer of 15 seconds, not fancy) and at the end of timer change icon colors and change rpiPower booleans
-  if (rpiPoweringUp || blocked) waitAnimate();
-  if (!readyForNewData) { Serial.print("<y>"); Serial.flush(); readyForNewData = true; } else if (readSerialData()) processReceiveBuffer(); //process serial data
+  } else if (rpiPoweringDown && ms > delayEnd) {
+    rpiPowerOff(); //as the Raspberry Pi powering down we need to wait it out (fixed timer of 15 seconds, not fancy) and at the end of timer change icon colors and change rpiPower booleans
+  } else if ((rpiPoweringUp || blocked) && ms > delayEnd) {
+      waitAnimate();
+      delayEnd = ms + ONE_SECOND;
+  }
+  if (!readyForNewData) {
+    Serial.print("<y>");
+    Serial.flush();
+    readyForNewData = true;
+  } else if (readSerialData()) processReceiveBuffer(); //process serial data
   if (renderPipe.first) renderRenderPipe();
   if (scrollWidth > H_SCROLL_MIN_SIZE) {
-    if (millis() > scrollEnd) {
+    if (ms > scrollEnd) {
       if (scrollPosition + H_SCROLL_MIN_SIZE > scrollWidth) scrollPosition = 0 /*reset*/; else scrollPosition += H_SCROLL;
       renderPipe.add(scrollBackground);
       renderPipe.add(scrollLabel);
-      scrollEnd = millis() + THREE_SECONDS;
+      scrollEnd = ms + THREE_SECONDS;
     }
   }
 }
@@ -521,16 +572,27 @@ void waitAnimate() {
     memset(statusLabel->text, (char)0, MAX_TEXT) /*clear status text for animation, when not going or when full restart */;
     renderPipe.add(statusBar); //background label needs to update
   }
-  delay(500); //wait 500ms
-  for (uint8_t i = 0; i < MAX_TEXT-1; i++) {
-    if (statusLabel->text[i] == 0) { statusLabel->text[i] = DOT ; statusLabel->text[i+1] == 0; break; }
+  for (uint8_t i = 0; i < MAX_TEXT - 1; i++) {
+    if (statusLabel->text[i] == 0) {
+      statusLabel->text[i] = DOT ;
+      statusLabel->text[i + 1] == 0;
+      break;
+    }
   }
   renderPipe.add(statusLabel); //status label needs to update
 }
 
 void swithRpiPower(Control* control) {
   rpiPower = !rpiPower;
-  if(rpiPower) { control->setText(TXT_TURNING_ON); digitalWrite(RPI_POWER, HIGH) /*turn relay ON*/; rpiPoweringUp = true; } else { control->setText(TXT_TURNING_OFF);  Serial.print("<p>") /*Send Power Off command to Raspberry Pi*/ ; Serial.flush(); }
+  if (rpiPower) {
+    control->setText(TXT_TURNING_ON);
+    digitalWrite(RPI_POWER, HIGH) /*turn relay ON*/;
+    rpiPoweringUp = true;
+  } else {
+    control->setText(TXT_TURNING_OFF);
+    Serial.print("<p>") /*Send Power Off command to Raspberry Pi*/ ;
+    Serial.flush();
+  }
   lastRpiPower = rpiPower;
   renderPipe.add(control);
   renderPipe.add(control->parent);
@@ -547,7 +609,7 @@ void rpiPowerOff() {
 void setAllServicesRed() {
   airplayIcon->color1 = COLOR_RED; renderPipe.add(airplayIcon);
   pandoraIcon->color1 = COLOR_RED; renderPipe.add(pandoraIcon);
-  appleMusicIcon->color1 = COLOR_RED; renderPipe.add(appleMusicIcon);
+ // appleMusicIcon->color1 = COLOR_RED; renderPipe.add(appleMusicIcon);
 }
 
 void closePopup(Control* control) {
@@ -564,26 +626,26 @@ void closePopupAndSwithRpiPower(Control* control) {
   swithRpiPower(rpiPowerItem);
 }
 
-void switchPandora(Control* control) { 
+void switchPandora(Control* control) {
   if (rpiPower && !rpiPoweringUp) {
     Serial.print("<N>"); Serial.flush();
   } else {
-    popupControl->visible = true; 
+    popupControl->visible = true;
     popupLabel1->setText(TXT_TURN_ON_NOW);
-    statusLabel->setText(TXT_TURN_STREAMER_ON2); 
+    statusLabel->setText(TXT_TURN_STREAMER_ON2);
     setStatus();
     renderPipe.add(popupControl); renderQueueAllChildren(popupControl);
     sendEnter(popupConfirmMenu);
   }
 }
 
-void switchAppleMusic(Control* control) { 
+void switchAppleMusic(Control* control) {
   if (rpiPower && !rpiPoweringUp) {
     Serial.print(F("<L>")); Serial.flush();
   } else {
-    popupControl->visible = true; 
+    popupControl->visible = true;
     popupLabel1->setText(TXT_TURN_ON_NOW);
-    statusLabel->setText(TXT_TURN_STREAMER_ON2); 
+    statusLabel->setText(TXT_TURN_STREAMER_ON2);
     setStatus();
     renderPipe.add(popupControl); renderQueueAllChildren(popupControl);
     sendEnter(popupConfirmMenu);
@@ -599,15 +661,15 @@ void hidePlayer() {
   }
 }
 
-void clickPlayer(Control* control) { 
+void clickPlayer(Control* control) {
   Serial.print(F("<K>")); Serial.flush();
 }
 
-void upPlayer(Control* control) { 
+void upPlayer(Control* control) {
   Serial.print(F("<T>")); Serial.flush();
 }
 
-void downPlayer(Control* control) { 
+void downPlayer(Control* control) {
   Serial.print(F("<t>")); Serial.flush();
 }
 
@@ -615,19 +677,23 @@ bool readSerialData() {
   while (Serial.available() > 0) {
     character = Serial.read();
     if (!receiving) {
-      if (character == PPP_BEGIN_FLAG) { receiving = true; receiveIndex = 0; receiveSizeLeft = 1 /*the command is expected - so 1 byte*/; }
+      if (character == PPP_BEGIN_FLAG) {
+        receiving = true;
+        receiveIndex = 0;
+        receiveSizeLeft = 1 /*the command is expected - so 1 byte*/;
+      }
     } else {
       if (character == PPP_END_FLAG && receiveSizeLeft == 0) {
         if (receiveIndex <= PPP_NDX_LENGTH) receiveBuffer[PPP_NDX_LENGTH] = 0; //no length received - 1 byte packet like <P>
         receiving = false;
         return true;
       } else {
-        if (receiveIndex < MAX_MESSAGE-1) {
+        if (receiveIndex < MAX_MESSAGE - 1) {
           receiveBuffer[receiveIndex] = character;
           if (receiveIndex == PPP_NDX_LENGTH) receiveSizeLeft = character; else if (receiveSizeLeft == 0) receiving = false; else receiveSizeLeft--;
           receiveIndex++;
         } else receiving = false;
-      } 
+      }
     }
   }
   return false;
@@ -647,7 +713,7 @@ void processReceiveBuffer() {
       rpiPoweringUp = false;
       break;
 
-    case PPP_T_POWER_OFF_CONFIRMED: /*Power Off command received by Raspberry Pi and this is confirmation, it is shutting down */ 
+    case PPP_T_POWER_OFF_CONFIRMED: /*Power Off command received by Raspberry Pi and this is confirmation, it is shutting down */
       rpiPoweringDown = true;
       delayEnd = millis() + FIFTEEN_SECONDS;
       statusLabel->setText(TXT_WAIT_FIFTEEN_SECONDS);
@@ -656,20 +722,20 @@ void processReceiveBuffer() {
       break;
 
     case PPP_T_AIRPLAY_ICON_COLOR:
-      airplayIcon->color1 = readRGB88AndConvertRGB656(receiveBuffer,2); renderPipe.add(airplayIcon); //third, forth & fifth byte are new color for the airplay icon
-      break;
-      
-    case PPP_T_PANDORA_MUSIC_ICON_COLOR:
-      pandoraIcon->color1 = readRGB88AndConvertRGB656(receiveBuffer,2); renderPipe.add(pandoraIcon); //third, forth & fifth byte are new color for the pandora icon
+      airplayIcon->color1 = readRGB888AndConvertRGB656(receiveBuffer, 2); renderPipe.add(airplayIcon); //third, forth & fifth byte are new color for the airplay icon
       break;
 
-    case PPP_T_APPLE_MUSIC_ICON_COLOR:
-      appleMusicIcon->color1 = readRGB88AndConvertRGB656(receiveBuffer,2); //third, forth & fifth byte are new color for the airplay icon
+    case PPP_T_PANDORA_MUSIC_ICON_COLOR:
+      pandoraIcon->color1 = readRGB888AndConvertRGB656(receiveBuffer, 2); renderPipe.add(pandoraIcon); //third, forth & fifth byte are new color for the pandora icon
       break;
-      
+
+//    case PPP_T_APPLE_MUSIC_ICON_COLOR:
+//      appleMusicIcon->color1 = readRGB888AndConvertRGB656(receiveBuffer, 2); //third, forth & fifth byte are new color for the airplay icon
+//      break;
+
     case PPP_T_STATUS_TEXT:
-      receiveBuffer[PPP_NDX_LENGTH+size_+1] = 0; //terminate with zero byte - actual size
-      receiveBuffer[PPP_NDX_LENGTH+MAX_TEXT] = 0; //terminate with zero byte - max size
+      receiveBuffer[PPP_NDX_LENGTH + size_ + 1] = 0; //terminate with zero byte - actual size
+      receiveBuffer[PPP_NDX_LENGTH + MAX_TEXT] = 0; //terminate with zero byte - max size
       strcpy(statusLabel->text, (char*)&receiveBuffer[2]); setStatus();
       break;
 
@@ -680,7 +746,7 @@ void processReceiveBuffer() {
     case PPP_T_UNBLOCK:
       blocked = false;
       break;
-    
+
     case PPP_T_DRAWPIXELBLOCK:
       if (!playerControl->visible) {
         playerControl->visible = true;
@@ -695,11 +761,11 @@ void processReceiveBuffer() {
       hidePlayer();
       break;
 
-    case PPP_T_NO_OPERATION:     
+    case PPP_T_NO_OPERATION:
       break;
 
     default:
       sprintf(statusLabel->text, "%d NOT IMPL'D\n", (byte)receiveBuffer[PPP_NDX_COMMAND]); setStatus(); //render whatever is in statusLabel->text
       break;
-  }  
+  }
 }
