@@ -1,5 +1,7 @@
+#include <avr/pgmspace.h> //for PROGMEM
+
 //ICONS - tool to create at http://javl.github.io/image2cpp/ - use 16x16 monochrome images & set white background & set use invert image colors & set plain bytes & set Horizontal 1 byte per pixel draw mode
-const unsigned char IMG_POWER [] PROGMEM = { 0x01, 0x80, 0x01, 0x80, 0x01, 0x80, 0x0d, 0xb0, 0x1d, 0xb8, 0x39, 0x9c, 0x31, 0x8e, 0x60, 0x06, 0x60, 0x06, 0x60, 0x06, 0x60, 0x06, 0x30, 0x0c, 0x38, 0x1c, 0x1c, 0x38, 0x0f, 0xf0, 0x03, 0xc0 };
+const unsigned char IMG_POWER[] PROGMEM = { 0x01, 0x80, 0x01, 0x80, 0x01, 0x80, 0x0d, 0xb0, 0x1d, 0xb8, 0x39, 0x9c, 0x31, 0x8e, 0x60, 0x06, 0x60, 0x06, 0x60, 0x06, 0x60, 0x06, 0x30, 0x0c, 0x38, 0x1c, 0x1c, 0x38, 0x0f, 0xf0, 0x03, 0xc0 };
 const unsigned char IMG_AIRPLAY [] PROGMEM = { 0x07, 0xe0, 0x08, 0x10, 0x30, 0x0c, 0x43, 0xc2, 0x44, 0x22, 0x49, 0x92, 0x92, 0x49, 0x94, 0x29, 0x94, 0x29, 0x94, 0x29, 0x90, 0x09, 0x49, 0x92, 0x43, 0xc2, 0x27, 0xe4, 0x0f, 0xf0, 0x0f, 0xf0 };
 //const unsigned char iMG_CHROMECAST_AUDIO [] PROGMEM = { 0x0f, 0xf8, 0x1f, 0xfc, 0x1e, 0x3c, 0x1e, 0x3c, 0x1f, 0x7c, 0x1f, 0xfc, 0x1c, 0x1c, 0x18, 0x0c, 0x11, 0xc4, 0x13, 0xe4, 0x00, 0xe4, 0x1e, 0x64, 0x03, 0x44, 0x19, 0x0c, 0x05, 0x78, 0x15, 0x00 };
 const unsigned char IMG_PANDORA_MUSIC [] PROGMEM = { 0x7f, 0xf0, 0x40, 0x08, 0x40, 0x04, 0x40, 0x02, 0x40, 0x02, 0x40, 0x02, 0x40, 0x02, 0x40, 0x02, 0x40, 0x02, 0x40, 0x04, 0x40, 0x08, 0x47, 0xf0, 0x44, 0x00, 0x44, 0x00, 0x44, 0x00, 0x7c, 0x00 };
@@ -176,143 +178,18 @@ Control* mainMenu; Control* rpiPowerItem;
 Control* popupControl; Control* popupLabel1; Control* popupConfirmMenu;
 Control* playerControl; Control* blockCanvas;
 
-// INITIALIZATION
-
-void checkPosition() {
-  encoder.tick(); // just call tick() to check the state.
-}
-
-void setup(void) {
-  Serial.begin(SERIAL_BAUD_RATE); // open the serial port with given baud rate
-
-  tft.initR(INITR_BLACKTAB); tft.setRotation(1); tft.setFont(&FreeSans9pt7b); tft.setTextWrap(false); //initialize display & set default font
-
-  //RPi Power
-  pinMode(RPI_POWER, OUTPUT);    // sets the digital pin 2 as output
-  digitalWrite(RPI_POWER, LOW); //off
-
-  //initialize encoder
-  attachInterrupt(ROTENC_CLK, checkPosition, CHANGE);
-  attachInterrupt(ROTENC_DT, checkPosition, CHANGE);
-  pinMode(ROTENC_SW, INPUT_PULLUP);
-
-  //initialize GUI
-  mainControl = new Control(TYPE_MAIN, NULL /** root - no parent **/);
-  mainControl->color2 = ST7735_BLACK; //background color
-
-  //initialize status bar
-
-  Control* topbar = new Control(TYPE_RECTANGLE, mainControl);
-  topbar->x = 0; topbar->y = 0; topbar->width = 160; topbar->height = 13;
-  topbar->color1 = COLOR_BLUE; topbar->color2 = ST7735_BLACK;
-
-  Control* ampiLabelMain = new Control(TYPE_LABEL, mainControl, TXT_AMPI); //size x=y=0 to hide background
-  ampiLabelMain->x = 4; ampiLabelMain->y = 3;
-  ampiLabelMain->color1 = COLOR_RED; ampiLabelMain->color2 = ST7735_BLACK;
-
-  statusBar = new Control(TYPE_RECTANGLE, mainControl);
-  statusBar->x = 0; statusBar->y = 111 /*128 - 17*/; statusBar->width = 160; statusBar->height = 17;
-  statusBar->color1 = ST7735_BLACK; statusBar->color2 = COLOR_BLUE;
-  scrollBackground = statusBar; //background for scrollLabel
-
-  statusLabel = new Control(TYPE_LABEL, mainControl, NULL, true);
-  statusLabel->x = 3; statusLabel->y = 110;
-  statusLabel->color1 = ST7735_WHITE;
-  scrollLabel = statusLabel; //set label to scroll when text is too big too big to fit on the screen
-
-  mainMenu = new Control(TYPE_LIST, mainControl);
-  mainMenu->x = 3; mainMenu->y = 25; mainMenu->width = 154 /*160 - 6*/; mainMenu->height = 81 /*2*3+25*3*/;
-  mainMenu->color1 = ST7735_WHITE; mainMenu->color2 = ST7735_BLACK;
-  mainMenu->events = new Events(); mainMenu->events->onEnter = enterMenu;
-
-  rpiPowerItem = new Control(TYPE_ITEM, mainMenu, TXT_TURN_STREAMER_ON, true);
-  rpiPowerItem->width = mainMenu->width; rpiPowerItem->height = 25; rpiPowerItem->x = 1;
-  rpiPowerItem->color1 = ST7735_BLACK; rpiPowerItem->color2 = COLOR_RED;
-  rpiPowerItem->events = new Events(); rpiPowerItem->events->onClick = swithRpiPower;
-
-  Control* pandoraItem = new Control(TYPE_ITEM, mainMenu, TXT_PANDORA_MUSIC);
-  pandoraItem->width = mainMenu->width; pandoraItem->height = 25; pandoraItem->x = 1; pandoraItem->y = 27  /*1*2+1*25*/;
-  pandoraItem->color1 = ST7735_BLACK; pandoraItem->color2 = COLOR_RED;
-  pandoraItem->events = new Events(); pandoraItem->events->onClick = switchPandora;
-
-  Control* appleItem = new Control(TYPE_ITEM, mainMenu, TXT_APPLE_MUSIC);
-  appleItem->width = mainMenu->width; appleItem->height = 25; appleItem->x = 1; appleItem->y = 54 /*2*2+2*25*/;
-  appleItem->color1 = ST7735_BLACK; appleItem->color2 = COLOR_RED;
-  appleItem->events = new Events(); appleItem->events->onClick = switchAppleMusic;
-
-  rpiPowerIcon = new Control(TYPE_ICON, mainControl);
-  rpiPowerIcon->width = 16; rpiPowerIcon->height = 16; rpiPowerIcon->x = 50 /* 3+45 (AMPi label width) + 2 */; rpiPowerIcon->y = 3;
-  rpiPowerIcon->color1 = COLOR_RED; rpiPowerIcon->icon = IMG_POWER;
-
-  airplayIcon = new Control(TYPE_ICON, mainControl);
-  airplayIcon->width = 16; airplayIcon->height = 16; airplayIcon->x = 68 /*3+45 (AMPi label width) +2+16 (icon width) +2 */; airplayIcon->y = 3;
-  airplayIcon->color1 = COLOR_RED; airplayIcon->icon = IMG_AIRPLAY;
-
-  pandoraIcon = new Control(TYPE_ICON, mainControl);
-  pandoraIcon->width = 16; pandoraIcon->height = 16; pandoraIcon->x = 86 /*3+45 (AMPi label width) +2+16 (icon width*2) +2*2 */; pandoraIcon->y = 3;
-  pandoraIcon->color1 = COLOR_RED; pandoraIcon->icon = IMG_PANDORA_MUSIC;
-
-//  appleMusicIcon = new Control(TYPE_ICON, mainControl);
-//  appleMusicIcon->width = 16; appleMusicIcon->height = 16; appleMusicIcon->x = 104 /*3+45 (AMPi label width) +2+16 (icon width*3) +2*3 */; appleMusicIcon->y = 3;
-//  appleMusicIcon->color1 = COLOR_RED; appleMusicIcon->icon = IMG_APPLE_MUSIC;
-
-//  chromeCastIcon = new Control(TYPE_ICON, mainControl);
-//  chromeCastIcon->width = 16; chromeCastIcon->height = 16; chromeCastIcon->x = 120 /*3+45 (AMPi label width) +2+16 (icon width*4) +2*3 */; chromeCastIcon->y = 3;
-//  chromeCastIcon->color1 = COLOR_RED; chromeCastIcon->icon = iMG_CHROMECAST_AUDIO;
-  //build main menu
-  mainMenu->child = rpiPowerItem; rpiPowerItem->next = pandoraItem; pandoraItem->next = appleItem;
-
-  //build popup GUI
-  popupControl = new Control(TYPE_RECTANGLE, mainControl);
-  popupControl->x = 4; popupControl->y = 2; popupControl->width = 152; popupControl->height = 107;
-  popupControl->color1 = COLOR_ORANGE; popupControl->color2 = COLOR_BLUE;
-  popupControl->visible = false;
-
-  popupLabel1 = new Control(TYPE_LABEL, popupControl); //size x=y=0 to hide background
-  popupLabel1->x = 5; popupLabel1->y = 10;
-  popupLabel1->color1 = ST7735_WHITE;
-
-  popupConfirmMenu = new Control(TYPE_LIST, popupControl);
-  popupConfirmMenu->x = 5; popupConfirmMenu->y = 35; popupConfirmMenu->width = 150; popupConfirmMenu->height = 52 /*2*2+2*25*/;
-  popupConfirmMenu->color1 = ST7735_WHITE; popupConfirmMenu->color2 = ST7735_BLACK;
-  popupConfirmMenu->events = new Events(); popupConfirmMenu->events->onEnter = enterMenu;
-
-  Control* popupConfirmYesItem = new Control(TYPE_ITEM, popupConfirmMenu, TXT_YES);
-  popupConfirmYesItem->width = popupConfirmMenu->width; popupConfirmYesItem->height = 25; popupConfirmYesItem->x = 1;
-  popupConfirmYesItem->color1 = ST7735_BLACK; popupConfirmYesItem->color2 = COLOR_RED;
-  popupConfirmYesItem->events = new Events(); popupConfirmYesItem->events->onClick = closePopupAndSwithRpiPower;
-
-  Control* popupConfirmNoItem = new Control(TYPE_ITEM, popupConfirmMenu, TXT_NO_DONT);
-  popupConfirmNoItem->width = popupConfirmMenu->width; popupConfirmNoItem->height = 25; popupConfirmNoItem->x = 1; popupConfirmNoItem->y = 26;
-  popupConfirmNoItem->color1 = ST7735_BLACK; popupConfirmNoItem->color2 = COLOR_RED;
-  popupConfirmNoItem->events = new Events();  popupConfirmNoItem->events->onClick = closePopup;
-
-  popupConfirmMenu->child = popupConfirmYesItem; popupConfirmYesItem->next = popupConfirmNoItem;
-
-  popupControl->child = popupLabel1; popupLabel1->next = popupConfirmMenu; //popupConfirmMenu->next = null;
-
-  //build player gui
-  playerControl = new Control(TYPE_RECTANGLE, mainControl);
-  playerControl->x = 4; playerControl->y = 2; playerControl->width = 152; playerControl->height = 107;
-  playerControl->color1 = ST7735_BLACK; playerControl->color2 = ST7735_BLACK;
-  playerControl->visible = false;
-  playerControl->events = new Events(); playerControl->events->onClick = clickPlayer; playerControl->events->onUp = upPlayer; playerControl->events->onDown = downPlayer;
-
-  blockCanvas = new Control(TYPE_CANVAS, playerControl);
-  blockCanvas->x = 4; blockCanvas->y = 2; blockCanvas->width = 152; blockCanvas->height = 107;
-
-  playerControl->child = blockCanvas; //blockCanvas->next = null;
-
-  //connect main gui components
-  mainControl->child = topbar; topbar->next = ampiLabelMain; ampiLabelMain->next = statusBar; statusBar->next = statusLabel; statusLabel->next = mainMenu; mainMenu->next = rpiPowerIcon; rpiPowerIcon->next = airplayIcon; airplayIcon->next = pandoraIcon; pandoraIcon->next = popupControl; /* pandoraIcon->next = appleMusicIcon; appleMusicIcon->next = chromeCastIcon; chromeCastIcon->next = popupControl; */ popupControl->next = playerControl; playerControl->next = NULL;  //build main GUI
-
-  renderPipe.add(mainControl);
-  renderQueueAllChildren(mainControl);
-
-  renderRenderPipe();
-}
-
 // GUI LIBARY IMPLEMENTATION
+
+
+void color565toRGB(uint16_t color, uint8_t &r, uint8_t &g, uint8_t &b) {
+  r = (color >> 8) & 0x00F8;  //converts 565 format 16 bit color to RGB https://github.com/PaulStoffregen/ILI9341_t3/pull/24/commits/7e3789680bd6ecee425edc3d60a2a973ff417ab8
+  g = (color >> 3) & 0x00FC;
+  b = (color << 3) & 0x00F8;
+}
+
+int readRGB888AndConvertRGB656(unsigned char * buffer, uint16_t index) {
+  return tft.color565(buffer[index], buffer[index + 1], buffer[index + 2]);
+}
 
 void renderText(char* text, uint8_t x, uint8_t y, uint8_t width, uint8_t height, uint16_t color1, uint16_t color2, bool setScrollWidth) {
   if (!text) return;
@@ -356,15 +233,17 @@ void render(Control* c) {
     switch (c->type) {
       case TYPE_MAIN: tft.fillScreen(c->color2); break;
       case TYPE_LABEL: renderText(c->text, c->x, c->y, c->width, c->height, c->color1, c->color2, c == scrollLabel); break;
-      case TYPE_RECTANGLE: if (c->width > 0 && c->height > 0)
-          if (c->color1 == c->color2) tft.fillRect(c->x, c->y, c->width, c->height, c->color2);
-          else {
-            uint8_t r1, g1, b1; color565toRGB(c->color1, r1, g1, b1);
-            uint8_t r2, g2, b2; color565toRGB(c->color2, r1, g2, b2);
-            for (uint8_t i = 0; i < c->height; i++) {
-              tft.drawFastHLine( c->x, c->y + i, c->width, tft.color565(map(i, 0, c->height, r1, r2), map(i, 0, c->height, g1, g2), map(i, 0, c->height, b1, b2)));
-            }
-          };
+      case TYPE_RECTANGLE: 
+          if (c->width > 0 && c->height > 0) {
+            if (c->color1 == c->color2) tft.fillRect(c->x, c->y, c->width, c->height, c->color2);
+            else {
+              uint8_t r1, g1, b1; color565toRGB(c->color1, r1, g1, b1);
+              uint8_t r2, g2, b2; color565toRGB(c->color2, r1, g2, b2);
+              for (uint8_t i = 0; i < c->height; i++) {
+                tft.drawFastHLine( c->x, c->y + i, c->width, tft.color565(map(i, 0, c->height, r1, r2), map(i, 0, c->height, g1, g2), map(i, 0, c->height, b1, b2)));
+              }
+            };
+          }
         break;
       case TYPE_ICON: tft.drawBitmap(c->x, c->y, c->icon, c->width, c->height, c->color1); break;
       case TYPE_ITEM: renderItem(c); break;
@@ -418,15 +297,6 @@ void renderRenderPipe() {
     free(cn2); //clean up
   }
   renderPipe.first = NULL; renderPipe.last = NULL;
-}
-
-void color565toRGB(uint16_t color, uint8_t &r, uint8_t &g, uint8_t &b) {
-  r = (color >> 8) & 0x00F8;  //converts 565 format 16 bit color to RGB https://github.com/PaulStoffregen/ILI9341_t3/pull/24/commits/7e3789680bd6ecee425edc3d60a2a973ff417ab8
-  g = (color >> 3) & 0x00FC;
-  b = (color << 3) & 0x00F8;
-}
-int readRGB888AndConvertRGB656(unsigned char * buffer, uint16_t index) {
-  return tft.color565(buffer[index], buffer[index + 1], buffer[index + 2]);
 }
 
 void enterMenu(Control* control) {
@@ -495,6 +365,11 @@ void clickMenu(Control* control) {
   }
 }
 
+void sendEnter(Control* control) {
+  focusControl = control;
+  if (control->events) if (control->events->onEnter) control->events->onEnter(control);
+}
+
 void sendUp() {
   if (!focusControl) return; //after start up do nothing
   if (focusControl->type == TYPE_LIST) moveMenu(focusControl, false); else if (focusControl->events) if (focusControl->events->onClick) focusControl->events->onUp(focusControl);
@@ -513,10 +388,6 @@ void sendClick() {
   if (focusControl->type == TYPE_LIST) clickMenu(focusControl); else if (focusControl->events) if (focusControl->events->onClick) focusControl->events->onClick(focusControl);
 }
 
-void sendEnter(Control* control) {
-  focusControl = control;
-  if (control->events) if (control->events->onEnter) control->events->onEnter(control);
-}
 
 void setStatus() { //render whatever is already in statusLabel->text
   scrollPosition = 0;
@@ -526,45 +397,6 @@ void setStatus() { //render whatever is already in statusLabel->text
   renderPipe.add(statusBar); //background label needs to update
   renderPipe.add(statusLabel); //status label needs to update
 }
-
-// MAIN LOOP
-
-void loop() {
-  unsigned long ms = millis();
-  encoder.tick();
-  if (!rpiPoweringDown && !rpiPoweringUp) { //normal operation as Raspberry Pi is not powering down or up
-    int newPos = encoder.getPosition();
-    if (encoderPosition != newPos) {
-        if (encoderPosition % 2 == 0) if (encoderPosition < newPos) sendUp(); else sendDown();
-      encoderPosition = newPos;
-    }
-    int btnState = digitalRead(ROTENC_SW); //read the button state
-    if (btnState == LOW) { //if we detect LOW signal, button is pressed
-      if (!buttonDown) sendClick();
-      buttonDown = true;
-    } else buttonDown = false;
-  } else if (rpiPoweringDown && ms > delayEnd) {
-    rpiPowerOff(); //as the Raspberry Pi powering down we need to wait it out (fixed timer of 15 seconds, not fancy) and at the end of timer change icon colors and change rpiPower booleans
-  } else if ((rpiPoweringUp || blocked) && ms > delayEnd) {
-      waitAnimate();
-      delayEnd = ms + ONE_SECOND;
-  }
-  if (!readyForNewData) {
-    Serial.print("<y>");
-    Serial.flush();
-    readyForNewData = true;
-  } else if (readSerialData()) processReceiveBuffer(); //process serial data
-  if (renderPipe.first) renderRenderPipe();
-  if (scrollWidth > H_SCROLL_MIN_SIZE) {
-    if (ms > scrollEnd) {
-      if (scrollPosition + H_SCROLL_MIN_SIZE > scrollWidth) scrollPosition = 0 /*reset*/; else scrollPosition += H_SCROLL;
-      renderPipe.add(scrollBackground);
-      renderPipe.add(scrollLabel);
-      scrollEnd = ms + THREE_SECONDS;
-    }
-  }
-}
-
 // GUI ACTIONS
 
 void waitAnimate() {
@@ -575,7 +407,7 @@ void waitAnimate() {
   for (uint8_t i = 0; i < MAX_TEXT - 1; i++) {
     if (statusLabel->text[i] == 0) {
       statusLabel->text[i] = DOT ;
-      statusLabel->text[i + 1] == 0;
+      statusLabel->text[i + 1] = 0;
       break;
     }
   }
@@ -767,5 +599,187 @@ void processReceiveBuffer() {
     default:
       sprintf(statusLabel->text, "%d NOT IMPL'D\n", (byte)receiveBuffer[PPP_NDX_COMMAND]); setStatus(); //render whatever is in statusLabel->text
       break;
+  }
+}
+
+// INITIALIZATION
+
+void checkPosition() {
+  encoder.tick(); // just call tick() to check the state.
+}
+
+void setup(void) {
+#if DEBUG == 1
+  debug_init();
+#endif
+  Serial.begin(SERIAL_BAUD_RATE); // open the serial port with given baud rate
+
+  tft.initR(INITR_BLACKTAB); tft.setRotation(1); tft.setFont(&FreeSans9pt7b); tft.setTextWrap(false); //initialize display & set default font
+
+  //RPi Power
+  pinMode(RPI_POWER, OUTPUT);    // sets the digital pin 2 as output
+  digitalWrite(RPI_POWER, LOW); //off
+
+  //initialize encoder
+  attachInterrupt(ROTENC_CLK, checkPosition, CHANGE);
+  attachInterrupt(ROTENC_DT, checkPosition, CHANGE);
+  pinMode(ROTENC_SW, INPUT_PULLUP);
+
+  //initialize GUI
+  mainControl = new Control(TYPE_MAIN, NULL /** root - no parent **/);
+  mainControl->color2 = ST7735_BLACK; //background color
+
+  //initialize status bar
+
+  Control* topbar = new Control(TYPE_RECTANGLE, mainControl);
+  topbar->x = 0; topbar->y = 0; topbar->width = 160; topbar->height = 13;
+  topbar->color1 = COLOR_BLUE; topbar->color2 = ST7735_BLACK;
+
+  Control* ampiLabelMain = new Control(TYPE_LABEL, mainControl, TXT_AMPI); //size x=y=0 to hide background
+  ampiLabelMain->x = 4; ampiLabelMain->y = 3;
+  ampiLabelMain->color1 = COLOR_RED; ampiLabelMain->color2 = ST7735_BLACK;
+
+  statusBar = new Control(TYPE_RECTANGLE, mainControl);
+  statusBar->x = 0; statusBar->y = 111 /*128 - 17*/; statusBar->width = 160; statusBar->height = 17;
+  statusBar->color1 = ST7735_BLACK; statusBar->color2 = COLOR_BLUE;
+  scrollBackground = statusBar; //background for scrollLabel
+
+  statusLabel = new Control(TYPE_LABEL, mainControl, NULL, true);
+  statusLabel->x = 3; statusLabel->y = 110;
+  statusLabel->color1 = ST7735_WHITE;
+  scrollLabel = statusLabel; //set label to scroll when text is too big too big to fit on the screen
+
+  mainMenu = new Control(TYPE_LIST, mainControl);
+  mainMenu->x = 3; mainMenu->y = 25; mainMenu->width = 154 /*160 - 6*/; mainMenu->height = 81 /*2*3+25*3*/;
+  mainMenu->color1 = ST7735_WHITE; mainMenu->color2 = ST7735_BLACK;
+  mainMenu->events = new Events(); mainMenu->events->onEnter = enterMenu;
+
+  rpiPowerItem = new Control(TYPE_ITEM, mainMenu, TXT_TURN_STREAMER_ON, true);
+  rpiPowerItem->width = mainMenu->width; rpiPowerItem->height = 25; rpiPowerItem->x = 1;
+  rpiPowerItem->color1 = ST7735_BLACK; rpiPowerItem->color2 = COLOR_RED;
+  rpiPowerItem->events = new Events(); rpiPowerItem->events->onClick = swithRpiPower;
+
+  Control* pandoraItem = new Control(TYPE_ITEM, mainMenu, TXT_PANDORA_MUSIC);
+  pandoraItem->width = mainMenu->width; pandoraItem->height = 25; pandoraItem->x = 1; pandoraItem->y = 27  /*1*2+1*25*/;
+  pandoraItem->color1 = ST7735_BLACK; pandoraItem->color2 = COLOR_RED;
+  pandoraItem->events = new Events(); pandoraItem->events->onClick = switchPandora;
+
+  Control* appleItem = new Control(TYPE_ITEM, mainMenu, TXT_APPLE_MUSIC);
+  appleItem->width = mainMenu->width; appleItem->height = 25; appleItem->x = 1; appleItem->y = 54 /*2*2+2*25*/;
+  appleItem->color1 = ST7735_BLACK; appleItem->color2 = COLOR_RED;
+  appleItem->events = new Events(); appleItem->events->onClick = switchAppleMusic;
+
+  rpiPowerIcon = new Control(TYPE_ICON, mainControl);
+  rpiPowerIcon->width = 16; rpiPowerIcon->height = 16; rpiPowerIcon->x = 50 /* 3+45 (AMPi label width) + 2 */; rpiPowerIcon->y = 3;
+  rpiPowerIcon->color1 = COLOR_RED; rpiPowerIcon->icon = IMG_POWER;
+
+  airplayIcon = new Control(TYPE_ICON, mainControl);
+  airplayIcon->width = 16; airplayIcon->height = 16; airplayIcon->x = 68 /*3+45 (AMPi label width) +2+16 (icon width) +2 */; airplayIcon->y = 3;
+  airplayIcon->color1 = COLOR_RED; airplayIcon->icon = IMG_AIRPLAY;
+
+  pandoraIcon = new Control(TYPE_ICON, mainControl);
+  pandoraIcon->width = 16; pandoraIcon->height = 16; pandoraIcon->x = 86 /*3+45 (AMPi label width) +2+16 (icon width*2) +2*2 */; pandoraIcon->y = 3;
+  pandoraIcon->color1 = COLOR_RED; pandoraIcon->icon = IMG_PANDORA_MUSIC;
+
+//  appleMusicIcon = new Control(TYPE_ICON, mainControl);
+//  appleMusicIcon->width = 16; appleMusicIcon->height = 16; appleMusicIcon->x = 104 /*3+45 (AMPi label width) +2+16 (icon width*3) +2*3 */; appleMusicIcon->y = 3;
+//  appleMusicIcon->color1 = COLOR_RED; appleMusicIcon->icon = IMG_APPLE_MUSIC;
+
+//  chromeCastIcon = new Control(TYPE_ICON, mainControl);
+//  chromeCastIcon->width = 16; chromeCastIcon->height = 16; chromeCastIcon->x = 120 /*3+45 (AMPi label width) +2+16 (icon width*4) +2*3 */; chromeCastIcon->y = 3;
+//  chromeCastIcon->color1 = COLOR_RED; chromeCastIcon->icon = iMG_CHROMECAST_AUDIO;
+  //build main menu
+  mainMenu->child = rpiPowerItem; rpiPowerItem->next = pandoraItem; pandoraItem->next = appleItem;
+
+  //build popup GUI
+  popupControl = new Control(TYPE_RECTANGLE, mainControl);
+  popupControl->x = 4; popupControl->y = 2; popupControl->width = 152; popupControl->height = 107;
+  popupControl->color1 = COLOR_ORANGE; popupControl->color2 = COLOR_BLUE;
+  popupControl->visible = false;
+
+  popupLabel1 = new Control(TYPE_LABEL, popupControl); //size x=y=0 to hide background
+  popupLabel1->x = 5; popupLabel1->y = 10;
+  popupLabel1->color1 = ST7735_WHITE;
+
+  popupConfirmMenu = new Control(TYPE_LIST, popupControl);
+  popupConfirmMenu->x = 5; popupConfirmMenu->y = 35; popupConfirmMenu->width = 150; popupConfirmMenu->height = 52 /*2*2+2*25*/;
+  popupConfirmMenu->color1 = ST7735_WHITE; popupConfirmMenu->color2 = ST7735_BLACK;
+  popupConfirmMenu->events = new Events(); popupConfirmMenu->events->onEnter = enterMenu;
+
+  Control* popupConfirmYesItem = new Control(TYPE_ITEM, popupConfirmMenu, TXT_YES);
+  popupConfirmYesItem->width = popupConfirmMenu->width; popupConfirmYesItem->height = 25; popupConfirmYesItem->x = 1;
+  popupConfirmYesItem->color1 = ST7735_BLACK; popupConfirmYesItem->color2 = COLOR_RED;
+  popupConfirmYesItem->events = new Events(); popupConfirmYesItem->events->onClick = closePopupAndSwithRpiPower;
+
+  Control* popupConfirmNoItem = new Control(TYPE_ITEM, popupConfirmMenu, TXT_NO_DONT);
+  popupConfirmNoItem->width = popupConfirmMenu->width; popupConfirmNoItem->height = 25; popupConfirmNoItem->x = 1; popupConfirmNoItem->y = 26;
+  popupConfirmNoItem->color1 = ST7735_BLACK; popupConfirmNoItem->color2 = COLOR_RED;
+  popupConfirmNoItem->events = new Events();  popupConfirmNoItem->events->onClick = closePopup;
+
+  popupConfirmMenu->child = popupConfirmYesItem; popupConfirmYesItem->next = popupConfirmNoItem;
+
+  popupControl->child = popupLabel1; popupLabel1->next = popupConfirmMenu; //popupConfirmMenu->next = null;
+
+  //build player gui
+  playerControl = new Control(TYPE_RECTANGLE, mainControl);
+  playerControl->x = 4; playerControl->y = 2; playerControl->width = 152; playerControl->height = 107;
+  playerControl->color1 = ST7735_BLACK; playerControl->color2 = ST7735_BLACK;
+  playerControl->visible = false;
+  playerControl->events = new Events(); playerControl->events->onClick = clickPlayer; playerControl->events->onUp = upPlayer; playerControl->events->onDown = downPlayer;
+
+  blockCanvas = new Control(TYPE_CANVAS, playerControl);
+  blockCanvas->x = 4; blockCanvas->y = 2; blockCanvas->width = 152; blockCanvas->height = 107;
+
+  playerControl->child = blockCanvas; //blockCanvas->next = null;
+
+  //connect main gui components
+  mainControl->child = topbar; topbar->next = ampiLabelMain; ampiLabelMain->next = statusBar; statusBar->next = statusLabel; statusLabel->next = mainMenu; mainMenu->next = rpiPowerIcon; rpiPowerIcon->next = airplayIcon; airplayIcon->next = pandoraIcon; pandoraIcon->next = popupControl; /* pandoraIcon->next = appleMusicIcon; appleMusicIcon->next = chromeCastIcon; chromeCastIcon->next = popupControl; */ popupControl->next = playerControl; playerControl->next = NULL;  //build main GUI
+
+  renderPipe.add(mainControl);
+  renderQueueAllChildren(mainControl);
+
+  renderRenderPipe();
+}
+
+// MAIN LOOP
+
+void loop() {
+  unsigned long ms = millis();
+  encoder.tick();
+  if (!rpiPoweringDown && !rpiPoweringUp) { //normal operation as Raspberry Pi is not powering down or up
+    int newPos = encoder.getPosition();
+    if (encoderPosition != newPos) {
+        if (encoderPosition % 2 == 0) {
+          if (encoderPosition < newPos) 
+            sendUp();
+          else 
+            sendDown();
+        }
+      encoderPosition = newPos;
+    }
+    int btnState = digitalRead(ROTENC_SW); //read the button state
+    if (btnState == LOW) { //if we detect LOW signal, button is pressed
+      if (!buttonDown) sendClick();
+      buttonDown = true;
+    } else buttonDown = false;
+  } else if (rpiPoweringDown && ms > delayEnd) {
+    rpiPowerOff(); //as the Raspberry Pi powering down we need to wait it out (fixed timer of 15 seconds, not fancy) and at the end of timer change icon colors and change rpiPower booleans
+  } else if ((rpiPoweringUp || blocked) && ms > delayEnd) {
+      waitAnimate();
+      delayEnd = ms + ONE_SECOND;
+  }
+  if (!readyForNewData) {
+    Serial.print("<y>");
+    Serial.flush();
+    readyForNewData = true;
+  } else if (readSerialData()) processReceiveBuffer(); //process serial data
+  if (renderPipe.first) renderRenderPipe();
+  if (scrollWidth > H_SCROLL_MIN_SIZE) {
+    if (ms > scrollEnd) {
+      if (scrollPosition + H_SCROLL_MIN_SIZE > scrollWidth) scrollPosition = 0 /*reset*/; else scrollPosition += H_SCROLL;
+      renderPipe.add(scrollBackground);
+      renderPipe.add(scrollLabel);
+      scrollEnd = ms + THREE_SECONDS;
+    }
   }
 }
